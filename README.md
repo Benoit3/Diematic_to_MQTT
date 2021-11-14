@@ -5,6 +5,14 @@ Today, allow only to read Diematic3 parameters
 
 TODO: documentation, feature to write parameters
 
+For hardware interface requirement, see https://github.com/Benoit3/Diematic
+
+To test and run it:
+- set parameters in conf file
+- python3 Diematic32MQTT.py
+
+
+
 To run as a service on raspbian:
 as root, copy and adapt Diematic32MQTT.service to /etc/systemd/system/ directory
 sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service

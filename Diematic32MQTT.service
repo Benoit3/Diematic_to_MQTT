@@ -1,0 +1,14 @@
+[Unit]
+Description=Diematic32MQTT
+After=multi-user.target
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3  /home/pi/Diematic32MQTT/Diematic32MQTT.py
+WorkingDirectory=/home/pi/Diematic32MQTT
+StandardOutput=inherit
+StandardError=inherit
+User=pi
+ 
+Restart=always
+[Install]
+WantedBy=multi-user.target

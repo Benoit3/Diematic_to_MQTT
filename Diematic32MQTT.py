@@ -34,16 +34,6 @@ class MessageBuffer:
 				#set the flag to False
 				self.buffer[topic]['update']=False;
 	
-
-
-
-def on_connect(client, userdata, flags, rc):
-	
-	logger.info('Connected to MQTT broker');
-	print('Connected to MQTT broker');
-	#subscribe to control messages with Q0s of 2
-	#client.subscribe(mqttTopicRoot+'/UK/+',2);
-
 	
 def diematic3Publish(self):
 	def floatValue(parameter):
@@ -95,72 +85,111 @@ def diematic3Publish(self):
 	buffer.update('','Online');
 	#send MQTT messages
 	buffer.send();
+	
+def on_connect(client, userdata, flags, rc):		
+	logger.critical('Connected to MQTT broker');
+	print('Connected to MQTT broker');
+	#subscribe to control messages with Q0s of 2
+	client.subscribe(mqttTopicRoot+'/+/+/set',2);
+	
+def tempSet(client, userdata, message):
+	try:
+		logger.debug('MQTT msg received :'+message.topic+' '+str(message.payload));
+		try:
+			value=float(message.payload);
+		except (ValueError,OverflowError):
+			logger.warning('Value error :'+str(message.payload));
+			return
+	
+		if (message.topic==mqttTopicRoot+'/hotWater/dayTemp/set'):
+			panel.hotWaterDayTargetTemp=value;
+			logger.info('Hotwater Day Target Temp Set :'+str(value));
+		elif(message.topic==mqttTopicRoot+'/hotWater/nightTemp/set'):
+			panel.hotWaterNightTargetTemp=value;
+			logger.info('Hotwater Night Target Temp Set :'+str(value));
+		elif(message.topic==mqttTopicRoot+'/zoneA/dayTemp/set'):
+			panel.zoneADayTargetTemp=value;
+			logger.info('Zone A Day Target Temp Set :'+str(value));
+		elif(message.topic==mqttTopicRoot+'/zoneA/nightTemp/set'):
+			panel.zoneANightTargetTemp=value;
+			logger.info('Zone A Night Target Temp Set :'+str(value));			
+		elif(message.topic==mqttTopicRoot+'/zoneA/antiiceTemp/set'):
+			panel.zoneAAntiiceTargetTemp=value;
+			logger.info('Zone A Antiice Target Temp Set :'+str(value));		
+	except BaseException as exc:	
+		logger.exception(exc);
 
 if __name__ == '__main__':
 
 	# Initialisation Logger
 	logging.config.fileConfig('logging.conf');
 	logger = logging.getLogger(__name__);
-	
-	#Initialisation config
-	config = configparser.ConfigParser()
-	config.read('Diematic32MQTT.conf')
+	try:
+		#Initialisation config
+		config = configparser.ConfigParser()
+		config.read('Diematic32MQTT.conf')
 
-	#Modbus settings
-	modbusAddress=config.get('Modbus','ip');
-	modbusPort=config.get('Modbus','port');
-	modbusRegulatorAddress=int(config.get('Modbus','regulatorAddress'),0);
-	logger.info('Modbus interface address: '+modbusAddress+' : '+modbusPort);
-	logger.info('Modbus regulator address: '+ hex(modbusRegulatorAddress));
-	
-	#boiler time timezone
-	boilerTimezone=config.get('Boiler','timezone');
-	
-	#MQTT settings
-	mqttBrokerHost=config.get('MQTT','brokerHost');
-	mqttBrokerPort=config.get('MQTT','brokerPort');
-	mqttTopicRoot=config.get('MQTT','topicRoot');
-	logger.info('Broker: '+mqttBrokerHost+' : '+mqttBrokerPort);
-	logger.info('Topic Root: '+mqttTopicRoot);		
-	
-	#init panel
-	Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
-	panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,boilerTimezone);
-	
-
-	#init mqtt brooker
-	client = mqtt.Client()
-	client.on_connect = on_connect
-	#last will
-	client.will_set(mqttTopicRoot,"Offline",1,True)
-	client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
-	#client.message_callback_add(mqttTopicRoot+'/UK/+',utilityKey)
-	client.loop_start()
-	#create mqtt message buffer
-	buffer=MessageBuffer(client);
+		#Modbus settings
+		modbusAddress=config.get('Modbus','ip');
+		modbusPort=config.get('Modbus','port');
+		modbusRegulatorAddress=int(config.get('Modbus','regulatorAddress'),0);
+		logger.critical('Modbus interface address: '+modbusAddress+' : '+modbusPort);
+		logger.critical('Modbus regulator address: '+ hex(modbusRegulatorAddress));
+		
+		#boiler time timezone
+		boilerTimezone=config.get('Boiler','timezone');
+		
+		#MQTT settings
+		mqttBrokerHost=config.get('MQTT','brokerHost');
+		mqttBrokerPort=config.get('MQTT','brokerPort');
+		mqttTopicRoot=config.get('MQTT','topicRoot');
+		logger.critical('Broker: '+mqttBrokerHost+' : '+mqttBrokerPort);
+		logger.critical('Topic Root: '+mqttTopicRoot);		
+		
+		#init panel
+		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
+		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,boilerTimezone);
 		
 
-	#start modbus thread
-	panel.loop_start();
-	
-	try:
-		run=True;
-		while run:
-			#check every 10s that all threads are living
-			time.sleep(10);
-			if (threading.active_count()!=3):
-				#if not stop modbus thread
-				panel.loop_stop();
-				
-				#disconnect mqtt server
-				client.loop_stop();
-				run=False;
-				sys.exit(1);
-	except KeyboardInterrupt:
-		print('stop panel');
-		panel.loop_stop();
-		print('Disconnecting from MQTT broker');
-		client.loop_stop();
+		#init mqtt brooker
+		client = mqtt.Client()
+		client.on_connect = on_connect
+		#last will
+		client.will_set(mqttTopicRoot,"Offline",1,True)
+		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
+		client.message_callback_add(mqttTopicRoot+'/+/+/set',tempSet)
+		client.loop_start()
+		#create mqtt message buffer
+		buffer=MessageBuffer(client);
+			
+
+		#start modbus thread
+		panel.loop_start();
+		
+		try:
+			run=True;
+			while run:
+				#check every 10s that all threads are living
+				time.sleep(10);
+				if (threading.active_count()!=3):
+					logger.critical('At least one process has been killed, stop launched');
+					#if not stop modbus thread
+					panel.loop_stop();
+					
+					#disconnect mqtt server
+					client.loop_stop();
+					run=False;
+			sys.exit(1);
+		except KeyboardInterrupt:
+			print('stop panel');
+			panel.loop_stop();
+			print('Disconnecting from MQTT broker');
+			client.loop_stop();
+			logger.critical('Stop requested');
+			
+	except BaseException as exc:	
+		logger.exception(exc);
+
 
 			
 

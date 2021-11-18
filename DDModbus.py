@@ -16,7 +16,15 @@ def calc_crc(data):
             else:
                 crc >>= 1
     return crc
-    
+
+#class used to define a structure of several continuous registers
+class RegisterSet:
+	address=0;
+	data=list();
+	
+	def __str__(self):
+		return('Reg:'+str(self.address)+' data: '+str(self.data));
+  
 class slaveRequest:
 	FRAME_MIN_LENGTH=0x08;
 	FRAME_MAX_LENGTH=0x100;
@@ -200,7 +208,7 @@ class DDModbus:
 			if (crc!=0x100*answer[answerLength-1]+answer[answerLength-2]):
 				self.logger.warning('Answer CRC error ');
 				return;
-			self.logger.info('Answer valid ');
+			self.logger.debug('Answer valid ');
 			
 			#return answer as dict
 			data=dict();
@@ -213,6 +221,53 @@ class DDModbus:
 			return;
 			
 	def masterWriteAnalog(self,modbusAddress,regAddress,data):
-		pass
-
+		#build request
+		request=bytearray();
+		#byte 0
+		request.append(modbusAddress);
+		#byte 1
+		request.append(DDModbus.WRITE_MULTIPLE_REGISTERS);
+		#byte 2 & 3
+		request.append((regAddress>>8)& 0xFF);
+		request.append(regAddress & 0xFF);
+		#byte 4 & 5 Reg Nb
+		request.append(0);
+		request.append(len(data));
+		#byte 6 byte Nb
+		request.append(2*len(data));
+		#data
+		for reg in data:
+			request.append((reg>>8)& 0xFF);
+			request.append(reg & 0xFF);
+			
+		crc=calc_crc(request);
+		request.append(crc & 0xFF);
+		request.append((crc>>8)& 0xFF);
+		request.append(0);
+		
+		#send it
+		self.logger.info('Send write request: '+request.hex());
+		self.socket.send(request);
+		
+		#wait for ack
+		try:
+			self.socket.settimeout(DDModbus.FRAME_RX_TIMEOUT);
+			answer=self.socket.recv(1024);
+			self.logger.debug('Ack received: '+answer.hex());
+			#check ack
+			waited_ack=request[0:6];
+			crc=calc_crc(waited_ack);
+			waited_ack.append(crc & 0xFF);
+			waited_ack.append((crc>>8)& 0xFF);
+			if (waited_ack==answer[0:8]):
+				self.logger.info('Ack OK');
+				return(True);
+			else:
+				self.logger.warning('Ack KO. Waited Ack was : '+waited_ack.hex());
+				return(False);
+			
+			
+		except socket.error as exc:
+			self.logger.warning('No ack  to master write request');
+			return(False);
 

@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import threading,traceback
+import threading
 import logging, logging.config
 import DDModbus
 import time,datetime,pytz
@@ -13,6 +13,13 @@ VALIDITY_TIME=120
 #parameter refresh period
 REFRESH_PERIOD=52
 
+#Target Temp min/max for hotwater
+TEMP_MIN_ECS=10
+TEMP_MAX_ECS=80
+
+#Target Temp min/max for hotwater
+TEMP_MIN_INT=5
+TEMP_MAX_INT=30
 
 class DDModBusStatus(IntEnum):
 	INIT=0;
@@ -58,6 +65,7 @@ class DDREGISTER(IntEnum):
 	
 class Diematic3Panel:
 	updateCallback=None;
+
 	def __init__(self,ip,port,regulatorAddress,boilerTimezone):
 		
 		#logger
@@ -76,11 +84,17 @@ class Diematic3Panel:
 		#status init to master state
 		self.busStatus=DDModBusStatus.INIT;
 		
+		#table for register write request is empty
+		self.regUpdateRequest=list();
+		
 		#register creation
 		self.registers=dict();
 		
 		#regulator attributes
 		self.initRegulator();
+		
+		#refreshRequest
+		self.refreshRequest=False;
 		
 	def initRegulator(self):
 		#regulator attributes
@@ -101,21 +115,87 @@ class Diematic3Panel:
 		self.hotWaterPump=None;
 		self.hotWaterTemp=None;
 		self.hotWaterMode=None;
-		self.hotWaterDayTargetTemp=None;
-		self.hotWaterNightTargetTemp=None;
+		self._hotWaterDayTargetTemp=None;
+		self._hotWaterNightTargetTemp=None;
 		self.zoneATemp=None;
 		self.zoneAMode=None;
 		self.zoneAPump=None;
-		self.zoneADayTargetTemp=None;
-		self.zoneANightTargetTemp=None;
-		self.zoneAAntiiceTargetTemp=None;
+		self._zoneADayTargetTemp=None;
+		self._zoneANightTargetTemp=None;
+		self._zoneAAntiiceTargetTemp=None;
 		self.zoneBTemp=None;
 		self.zoneBMode=None;
 		self.zoneBPump=None;
 		self.zoneBDayTargetTemp=None;
 		self.zoneBNightTargetTemp=None;
 		self.zoneBAntiiceTargetTemp=None;
-	
+
+	@property
+	def hotWaterNightTargetTemp(self):
+			return self._hotWaterNightTargetTemp;
+			
+	@hotWaterNightTargetTemp.setter
+	def hotWaterNightTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_ECS_NUIT.value;
+			#only 5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)];
+			self.regUpdateRequest.append(reg);
+			
+	@property
+	def hotWaterDayTargetTemp(self):
+			return self._hotWaterDayTargetTemp;
+			
+	@hotWaterDayTargetTemp.setter
+	def hotWaterDayTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_ECS.value;
+			#only 5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)];
+			self.regUpdateRequest.append(reg);
+			
+	@property
+	def zoneAAntiiceTargetTemp(self):
+			return self._zoneAAntiiceTargetTemp;
+			
+	@zoneAAntiiceTargetTemp.setter
+	def zoneAAntiiceTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_ANTIGEL_A.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);
+
+	@property
+	def zoneANightTargetTemp(self):
+			return self._zoneANightTargetTemp;
+			
+	@zoneANightTargetTemp.setter
+	def zoneANightTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_NUIT_A.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);
+			
+	@property
+	def zoneADayTargetTemp(self):
+			return self._zoneADayTargetTemp;
+			
+	@zoneADayTargetTemp.setter
+	def zoneADayTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_JOUR_A.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);
+			
+			
 	def refreshRegisters(self):
 		#update registers 1->63
 		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,1,63);
@@ -203,8 +283,8 @@ class Diematic3Panel:
 			self.hotWaterMode='PERM';
 		else:
 			self.hotWaterMode=None;
-		self.hotWaterDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS]);
-		self.hotWaterNightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS_NUIT]);
+		self._hotWaterDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS]);
+		self._hotWaterNightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS_NUIT]);
 		
 		#Area A
 		self.zoneATemp=self.float10(self.registers[DDREGISTER.TEMP_AMB_A]);
@@ -224,9 +304,9 @@ class Diematic3Panel:
 				self.zoneAMode='ANTIGEL';
 				
 			self.zoneAPump=(self.registers[DDREGISTER.BASE_ECS] & 0x10) >>4;
-			self.zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
-			self.zoneANightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_A]);
-			self.zoneAAntiiceTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_A]);
+			self._zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
+			self._zoneANightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_A]);
+			self._zoneAAntiiceTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_A]);
 
 		else:
 			self.zoneAMode=None;
@@ -268,41 +348,73 @@ class Diematic3Panel:
 		self.updateCallback();
 	
 	def loop(self):
-		self.run=True;
-		self.lastSynchroTimestamp=0;
-		while self.run:
-			#wait for a frame received
-			frame=self.modBusInterface.slaveRx();
+		try:
+			self.masterSlaveSynchro=False 
+			self.run=True;
+			self.lastSynchroTimestamp=0;
+			while self.run:
+				#wait for a frame received
+				frame=self.modBusInterface.slaveRx();
 
-			#depending current bus mode	
-			if (self.busStatus!=DDModBusStatus.SLAVE):
-				if (frame):
-					#switch mode to slave
-					self.busStatus=DDModBusStatus.SLAVE;
-					self.logger.debug('Bus status switched to SLAVE');
-					
-			elif (self.busStatus==DDModBusStatus.SLAVE):
-				if (not frame):
-					#switch mode to MASTER
-					self.busStatus=DDModBusStatus.MASTER;
-					self.logger.debug('Bus status switched to MASTER');
-					
-					#update registers, todo condition for refresh launch
-					if ((time.time()-self.lastSynchroTimestamp) > REFRESH_PERIOD):
-						if (self.refreshRegisters()):
-							self.lastSynchroTimestamp=time.time();
+				#depending current bus mode	
+				if (self.busStatus!=DDModBusStatus.SLAVE):
+					if (frame):
+						#switch mode to slave
+						self.busStatus=DDModBusStatus.SLAVE;
+						self.logger.debug('Bus status switched to SLAVE');
 						
-							#refresh regulator attribute
-							self.refreshAttributes();
+				elif (self.busStatus==DDModBusStatus.SLAVE):
+					if (not frame):
+						#switch mode to MASTER
+						self.busStatus=DDModBusStatus.MASTER;
+						self.logger.debug('Bus status switched to MASTER');
+						
+						#if the state wasn't still synchronised
+						if (not self.masterSlaveSynchro):
+							self.logger.info('ModBus Master Slave Synchro OK');
+							self.masterSlaveSynchro=True;
+
+						#if register update request are pending
+						if (self.regUpdateRequest is not False):
+							for regSet in self.regUpdateRequest:
+								self.logger.debug('Write Request :'+str(regSet.address)+':'+str(regSet.data));
+								#write to Analog registers
+								if ( not self.modBusInterface.masterWriteAnalog(self.regulatorAddress,regSet.address,regSet.data)):
+									#And cancel Master Slave Synchro Flag in case of error
+									self.logger.warning('ModBus Master Slave Synchro Error');
+									self.masterSlaveSynchro=False;
+							self.regUpdateRequest=list();
+							self.refreshRequest=True;
 							
-			if ((time.time()-self.lastSynchroTimestamp) > VALIDITY_TIME):
-				self.logger.debug('Init Regulator');
-				self.initRegulator();
-				self.updateCallback();
+						
+						#update registers, todo condition for refresh launch
+						if (((time.time()-self.lastSynchroTimestamp) > REFRESH_PERIOD) or self.refreshRequest):
+							if (self.refreshRegisters()):
+								self.lastSynchroTimestamp=time.time();
+							
+								#refresh regulator attribute
+								self.refreshAttributes();
+								
+								#clear Flag
+								self.refreshRequest=False;
+							else:
+								#Cancel Master Slave Synchro Flag in case of error
+								self.logger.warning('ModBus Master Slave Synchro Error');
+								self.masterSlaveSynchro=False;
+								
+				if ((time.time()-self.lastSynchroTimestamp) > VALIDITY_TIME):
+					self.lastSynchroTimestamp=time.time();
+					self.logger.debug('(Re)Init Link with Regulator');
+					self.initRegulator();
+					self.updateCallback();
+					self.refreshRequest=True;
+		except BaseException as exc:		
+			self.logger.exception(exc)
 				
 	def loop_start(self):
-		self.loopThread = threading.Thread(target=self.loop)
-		self.loopThread.start();
+			self.loopThread = threading.Thread(target=self.loop)
+			self.loopThread.start();
+
 		
 	def loop_stop(self):
 		self.run=False;

@@ -100,22 +100,29 @@ def tempSet(client, userdata, message):
 		except (ValueError,OverflowError):
 			logger.warning('Value error :'+str(message.payload));
 			return
-	
-		if (message.topic==mqttTopicRoot+'/hotWater/dayTemp/set'):
-			panel.hotWaterDayTargetTemp=value;
-			logger.info('Hotwater Day Target Temp Set :'+str(value));
-		elif(message.topic==mqttTopicRoot+'/hotWater/nightTemp/set'):
-			panel.hotWaterNightTargetTemp=value;
-			logger.info('Hotwater Night Target Temp Set :'+str(value));
-		elif(message.topic==mqttTopicRoot+'/zoneA/dayTemp/set'):
-			panel.zoneADayTargetTemp=value;
-			logger.info('Zone A Day Target Temp Set :'+str(value));
-		elif(message.topic==mqttTopicRoot+'/zoneA/nightTemp/set'):
-			panel.zoneANightTargetTemp=value;
-			logger.info('Zone A Night Target Temp Set :'+str(value));			
-		elif(message.topic==mqttTopicRoot+'/zoneA/antiiceTemp/set'):
-			panel.zoneAAntiiceTargetTemp=value;
-			logger.info('Zone A Antiice Target Temp Set :'+str(value));		
+		
+		#table for topic to attribute bind
+		table={'/hotWater/dayTemp/set':'hotWaterDayTargetTemp',
+			'/hotWater/nightTemp/set':'hotWaterNightTargetTemp',
+			'/zoneA/dayTemp/set':'zoneADayTargetTemp',
+			'/zoneA/nightTemp/set':'zoneANightTargetTemp',
+			'/zoneA/antiiceTemp/set':'zoneAAntiiceTargetTemp',
+			'/zoneB/dayTemp/set':'zoneBDayTargetTemp',
+			'/zoneB/nightTemp/set':'zoneBNightTargetTemp',
+			'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp'};
+			
+		#remove root of the topic
+		shortTopic=message.topic[len(mqttTopicRoot):]
+
+		#if topic exist
+		if shortTopic in table:
+			#process it
+			setattr(panel,table[shortTopic],value);
+			logger.info(shortTopic+' : '+str(value));
+		else:
+			logger.warning('Unknown topic : '+shortTopic);
+
+		
 	except BaseException as exc:	
 		logger.exception(exc);
 

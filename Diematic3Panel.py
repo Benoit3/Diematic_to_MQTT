@@ -126,9 +126,9 @@ class Diematic3Panel:
 		self.zoneBTemp=None;
 		self.zoneBMode=None;
 		self.zoneBPump=None;
-		self.zoneBDayTargetTemp=None;
-		self.zoneBNightTargetTemp=None;
-		self.zoneBAntiiceTargetTemp=None;
+		self._zoneBDayTargetTemp=None;
+		self._zoneBNightTargetTemp=None;
+		self._zoneBAntiiceTargetTemp=None;
 
 	@property
 	def hotWaterNightTargetTemp(self):
@@ -194,7 +194,45 @@ class Diematic3Panel:
 			#only 0.5 multiple are usable, temp is in tenth of degree
 			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
 			self.regUpdateRequest.append(reg);
+
+	@property
+	def zoneBAntiiceTargetTemp(self):
+			return self._zoneBAntiiceTargetTemp;
 			
+	@zoneBAntiiceTargetTemp.setter
+	def zoneBAntiiceTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_ANTIGEL_B.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);
+
+	@property
+	def zoneBNightTargetTemp(self):
+			return self._zoneBNightTargetTemp;
+			
+	@zoneBNightTargetTemp.setter
+	def zoneBNightTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_NUIT_B.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);
+			
+	@property
+	def zoneBDayTargetTemp(self):
+			return self._zoneBDayTargetTemp;
+			
+	@zoneBDayTargetTemp.setter
+	def zoneBDayTargetTemp(self,x):
+			#register structure creation
+			reg=DDModbus.RegisterSet();
+			reg.address=DDREGISTER.CONS_JOUR_B.value;
+			#only 0.5 multiple are usable, temp is in tenth of degree
+			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
+			self.regUpdateRequest.append(reg);		
 			
 	def refreshRegisters(self):
 		#update registers 1->63
@@ -311,9 +349,9 @@ class Diematic3Panel:
 		else:
 			self.zoneAMode=None;
 			self.zoneAPump=None;
-			self.zoneADayTargetTemp=None;
-			self.zoneANightTargetTemp=None;
-			self.zoneAAntiiceTargetTemp=None;
+			self._zoneADayTargetTemp=None;
+			self._zoneANightTargetTemp=None;
+			self._zoneAAntiiceTargetTemp=None;
 
 				
 		#Area B
@@ -334,16 +372,16 @@ class Diematic3Panel:
 				self.zoneBMode='ANTIGEL';
 				
 			self.zoneBPump=(self.registers[DDREGISTER.OPTIONS_B_C] & 0x10) >>4;
-			self.zoneBDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_B]);
-			self.zoneBNightTempTarget=self.float10(self.registers[DDREGISTER.CONS_NUIT_B]);
-			self.zoneBAntiiceTempTarget=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_B]);
+			self._zoneBDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_B]);
+			self._zoneBNightTempTarget=self.float10(self.registers[DDREGISTER.CONS_NUIT_B]);
+			self._zoneBAntiiceTempTarget=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_B]);
 
 		else:
 			self.zoneBMode=None;
 			self.zoneBPump=None;
-			self.zoneBDayTargetTemp=None;
-			self.zoneBNightTempTarget=None;
-			self.zoneBAntiiceTempTarget=None;
+			self._zoneBDayTargetTemp=None;
+			self._zoneBNightTempTarget=None;
+			self._zoneBAntiiceTempTarget=None;
 
 		self.updateCallback();
 	

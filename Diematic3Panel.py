@@ -399,13 +399,16 @@ class Diematic3Panel:
 					if (frame):
 						#switch mode to slave
 						self.busStatus=DDModBusStatus.SLAVE;
+						self.SlaveTime=time.time();
 						self.logger.debug('Bus status switched to SLAVE');
 						
 				elif (self.busStatus==DDModBusStatus.SLAVE):
-					if (not frame):
+					slaveModeDuration=time.time()-self.SlaveTime;
+					#if no frame have been received and slave happen during at least 5s
+					if ((not frame) and (slaveModeDuration>5)):
 						#switch mode to MASTER
 						self.busStatus=DDModBusStatus.MASTER;
-						self.logger.debug('Bus status switched to MASTER');
+						self.logger.debug('Bus status switched to MASTER after '+str(slaveModeDuration));
 						
 						#if the state wasn't still synchronised
 						if (not self.masterSlaveSynchro):
@@ -413,7 +416,7 @@ class Diematic3Panel:
 							self.masterSlaveSynchro=True;
 
 						#if register update request are pending
-						if (self.regUpdateRequest is not False):
+						if (self.regUpdateRequest):
 							for regSet in self.regUpdateRequest:
 								self.logger.debug('Write Request :'+str(regSet.address)+':'+str(regSet.data));
 								#write to Analog registers
@@ -427,6 +430,8 @@ class Diematic3Panel:
 						
 						#update registers, todo condition for refresh launch
 						if (((time.time()-self.lastSynchroTimestamp) > REFRESH_PERIOD) or self.refreshRequest):
+							print(time.time()-self.lastSynchroTimestamp);
+							print(self.refreshRequest);
 							if (self.refreshRegisters()):
 								self.lastSynchroTimestamp=time.time();
 							

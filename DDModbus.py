@@ -98,7 +98,8 @@ class DDModbus:
 	ip=None; #serial port id
 	port=None;
 	CLEANING_TIMEOUT=0.1;
-	FRAME_RX_TIMEOUT=2.0;
+	SLAVE_RX_TIMEOUT=0.5;
+	MASTER_RX_TIMEOUT=2.5;
 	READ_ANALOG_HOLDING_REGISTERS=0x03;
 	WRITE_MULTIPLE_REGISTERS=0x10;
 	
@@ -127,7 +128,7 @@ class DDModbus:
 
 	def slaveRx(self):
 			try:
-				self.socket.settimeout(DDModbus.FRAME_RX_TIMEOUT);
+				self.socket.settimeout(DDModbus.SLAVE_RX_TIMEOUT);
 				data=self.socket.recv(1024);
 				self.logger.debug('Frame received: '+data.hex());
 				
@@ -171,7 +172,7 @@ class DDModbus:
 		
 		#wait for answer
 		try:
-			self.socket.settimeout(DDModbus.FRAME_RX_TIMEOUT);
+			self.socket.settimeout(DDModbus.MASTER_RX_TIMEOUT);
 			answer=self.socket.recv(1024);
 			self.logger.debug('Answer received: '+answer.hex());
 			
@@ -251,7 +252,7 @@ class DDModbus:
 		
 		#wait for ack
 		try:
-			self.socket.settimeout(DDModbus.FRAME_RX_TIMEOUT);
+			self.socket.settimeout(DDModbus.MASTER_RX_TIMEOUT);
 			answer=self.socket.recv(1024);
 			self.logger.debug('Ack received: '+answer.hex());
 			#check ack

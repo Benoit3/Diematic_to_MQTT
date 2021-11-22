@@ -86,6 +86,10 @@ class Diematic3Panel:
 		
 		#table for register write request is empty
 		self.regUpdateRequest=list();
+		# specific Mode request
+		self.zoneAModeRequest=None;
+		self.modeBRequest=None;
+		self.hotWaterModeRequest=None
 		
 		#register creation
 		self.registers=dict();
@@ -114,11 +118,11 @@ class Diematic3Panel:
 		self.alarm={'id':None,'txt':None};
 		self.hotWaterPump=None;
 		self.hotWaterTemp=None;
-		self.hotWaterMode=None;
+		self._hotWaterMode=None;
 		self._hotWaterDayTargetTemp=None;
 		self._hotWaterNightTargetTemp=None;
 		self.zoneATemp=None;
-		self.zoneAMode=None;
+		self._zoneAMode=None;
 		self.zoneAPump=None;
 		self._zoneADayTargetTemp=None;
 		self._zoneANightTargetTemp=None;
@@ -232,8 +236,47 @@ class Diematic3Panel:
 			reg.address=DDREGISTER.CONS_JOUR_B.value;
 			#only 0.5 multiple are usable, temp is in tenth of degree
 			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);		
+			self.regUpdateRequest.append(reg);
+
+	@property
+	def zoneAMode(self):
+			return self._zoneAMode;
 			
+	@zoneAMode.setter
+	def zoneAMode(self,x):
+		self.logger.debug('zone A mode :'+str(x));
+		if (x=='AUTO'):
+			self.zoneAModeRequest=8;
+		elif (x=='TEMP JOUR'):
+			self.zoneAModeRequest=36;
+		elif (x=='TEMP NUIT'):
+			self.logger.debug('OK zone A mode :'+x);
+			self.zoneAModeRequest=34;
+		elif (x=='PERM JOUR'):
+			self.zoneAModeRequest=4;
+		elif (x=='PERM NUIT'):
+			self.zoneAModeRequest=2;
+		elif (x=='ANTIGEL'):
+			self.zoneAModeRequest=1;
+		else:
+			self.zoneAModeRequest=None;
+
+	@property
+	def hotWaterMode(self):
+			return self._hotWaterMode;
+			
+	@hotWaterMode.setter
+	def hotWaterMode(self,x):
+		self.logger.debug('zone A mode :'+str(x));
+		if (x=='AUTO'):
+			self.hotWaterModeRequest=0;
+		elif (x=='TEMP'):
+			self.hotWaterModeRequest=0x50;
+		elif (x=='PERM'):
+			self.hotWaterModeRequest=0x10;
+		else:
+			self.hotWaterMode=None;
+
 	def refreshRegisters(self):
 		#update registers 1->63
 		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,1,63);
@@ -314,13 +357,13 @@ class Diematic3Panel:
 		self.hotWaterPump=(self.registers[DDREGISTER.BASE_ECS] & 0x20) >>5;
 		self.hotWaterTemp=self.float10(self.registers[DDREGISTER.TEMP_ECS]);
 		if ((self.registers[DDREGISTER.MODE_A] & 0x50) ==0):
-			self.hotWaterMode='AUTO';
+			self._hotWaterMode='AUTO';
 		elif ((self.registers[DDREGISTER.MODE_A] & 0x50) ==0x50):
-			self.hotWaterMode='TEMP';
+			self._hotWaterMode='TEMP';
 		elif ((self.registers[DDREGISTER.MODE_A] & 0x50) ==0x10):
-			self.hotWaterMode='PERM';
+			self._hotWaterMode='PERM';
 		else:
-			self.hotWaterMode=None;
+			self._hotWaterMode=None;
 		self._hotWaterDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS]);
 		self._hotWaterNightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ECS_NUIT]);
 		
@@ -329,17 +372,17 @@ class Diematic3Panel:
 		if ( self.zoneATemp is not None):
 			modeA=self.registers[DDREGISTER.MODE_A]& 0x2F;
 			if (modeA==8):
-				self.zoneAMode='AUTO';
+				self._zoneAMode='AUTO';
 			elif (modeA==36):
-				self.zoneAMode='TEMP JOUR';
+				self._zoneAMode='TEMP JOUR';
 			elif (modeA==34):
-				self.zoneAMode='TEMP NUIT';
+				self._zoneAMode='TEMP NUIT';
 			elif (modeA==4):
-				self.zoneAMode='PERM JOUR';
+				self._zoneAMode='PERM JOUR';
 			elif (modeA==2):
-				self.zoneAMode='PERM NUIT';
+				self._zoneAMode='PERM NUIT';
 			elif (modeA==1):
-				self.zoneAMode='ANTIGEL';
+				self._zoneAMode='ANTIGEL';
 				
 			self.zoneAPump=(self.registers[DDREGISTER.BASE_ECS] & 0x10) >>4;
 			self._zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
@@ -347,7 +390,7 @@ class Diematic3Panel:
 			self._zoneAAntiiceTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_A]);
 
 		else:
-			self.zoneAMode=None;
+			self._zoneAMode=None;
 			self.zoneAPump=None;
 			self._zoneADayTargetTemp=None;
 			self._zoneANightTargetTemp=None;
@@ -361,7 +404,7 @@ class Diematic3Panel:
 			if (modeB==8):
 				self.zoneBMode='AUTO';
 			elif (modeB==36):
-				self.zoneAMode='TEMP JOUR';
+				self.zoneBMode='TEMP JOUR';
 			elif (modeB==34):
 				self.zoneBMode='TEMP NUIT';
 			elif (modeB==4):
@@ -414,8 +457,58 @@ class Diematic3Panel:
 						if (not self.masterSlaveSynchro):
 							self.logger.info('ModBus Master Slave Synchro OK');
 							self.masterSlaveSynchro=True;
+							
+						#if mode A register update request is pending
+						if (not(self.zoneAModeRequest is None) or not(self.hotWaterModeRequest is None)):
+							#get current mode
+							currentMode=self.modBusInterface.masterReadAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,1);
+							#in case of success
+							if (currentMode):
+								mode=currentMode[DDREGISTER.MODE_A];
+								self.logger.debug('Mode A current value :'+str(mode));
+								
+								#update mode with mode requests
+								if (not(self.zoneAModeRequest is None)):
+									mode= (mode & 0x50) | self.zoneAModeRequest;
+								if (not(self.hotWaterModeRequest is None)):
+									mode= (mode & 0x2F) | self.hotWaterModeRequest;
+								
+								#close request
+								self.zoneAModeRequest=None;
+								self.hotWaterModeRequest=None;
+								
+								
+								self.logger.debug('Mode A next value :'+str(mode));
+								#specific case for antiice request
+								#following write procedure is an empirical solution to have remote control refresh while updating mode
+								if (mode==1):
+									#set antiice day number to 1
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+									time.sleep(0.5);
+									#set antiice day number to 0
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+									#set mode A number to requested value
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
 
-						#if register update request are pending
+								#general case
+								#following write procedure is an empirical solution to have remote control refresh while updating mode
+								else:
+									#set mode A
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+									#set antiice day number to 1
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+									#set mode A again
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+									time.sleep(0.5);
+									#set mode A again
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+									#set antiice day number to 0
+									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+							
+								#request refresh
+								self.refreshRequest=True;
+								
+						#if general register update request are pending
 						if (self.regUpdateRequest):
 							for regSet in self.regUpdateRequest:
 								self.logger.debug('Write Request :'+str(regSet.address)+':'+str(regSet.data));
@@ -430,8 +523,6 @@ class Diematic3Panel:
 						
 						#update registers, todo condition for refresh launch
 						if (((time.time()-self.lastSynchroTimestamp) > REFRESH_PERIOD) or self.refreshRequest):
-							print(time.time()-self.lastSynchroTimestamp);
-							print(self.refreshRequest);
 							if (self.refreshRegisters()):
 								self.lastSynchroTimestamp=time.time();
 							

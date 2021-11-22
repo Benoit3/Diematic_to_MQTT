@@ -92,37 +92,58 @@ def on_connect(client, userdata, flags, rc):
 	#subscribe to control messages with Q0s of 2
 	client.subscribe(mqttTopicRoot+'/+/+/set',2);
 	
-def tempSet(client, userdata, message):
+def modeSet(client, userdata, message):
+	#table for topic to attribute bind
+	table={'/hotWater/mode/set':'hotWaterMode',
+		'/zoneA/mode/set':'zoneAMode',
+		'/zoneB/mode/set':'zoneBMode'};
+		
+	#remove root of the topic
+	shortTopic=message.topic[len(mqttTopicRoot):]
+	
+	#if topic exist
+	if shortTopic in table:
+		#process it
+		setattr(panel,table[shortTopic],message.payload.decode());
+		logger.info(shortTopic+' : '+str(message.payload));
+	else:
+		logger.warning('Unknown topic : '+shortTopic);
+
+def tempSet(client, userdata, message):	
+	#table for topic to attribute bind
+	table={'/hotWater/dayTemp/set':'hotWaterDayTargetTemp',
+		'/hotWater/nightTemp/set':'hotWaterNightTargetTemp',
+		'/zoneA/dayTemp/set':'zoneADayTargetTemp',
+		'/zoneA/nightTemp/set':'zoneANightTargetTemp',
+		'/zoneA/antiiceTemp/set':'zoneAAntiiceTargetTemp',
+		'/zoneB/dayTemp/set':'zoneBDayTargetTemp',
+		'/zoneB/nightTemp/set':'zoneBNightTargetTemp',
+		'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp'};
+		
+	#remove root of the topic
+	shortTopic=message.topic[len(mqttTopicRoot):]
+	
+	try:
+		value=float(message.payload);
+	except (ValueError,OverflowError):
+		logger.warning('Value error :'+str(message.payload));
+		return
+	
+	#if topic exist
+	if shortTopic in table:
+		#process it
+		setattr(panel,table[shortTopic],value);
+		logger.info(shortTopic+' : '+str(value));
+	else:
+		logger.warning('Unknown topic : '+shortTopic);
+
+def paramSet(client, userdata, message):
 	try:
 		logger.debug('MQTT msg received :'+message.topic+' '+str(message.payload));
-		try:
-			value=float(message.payload);
-		except (ValueError,OverflowError):
-			logger.warning('Value error :'+str(message.payload));
-			return
-		
-		#table for topic to attribute bind
-		table={'/hotWater/dayTemp/set':'hotWaterDayTargetTemp',
-			'/hotWater/nightTemp/set':'hotWaterNightTargetTemp',
-			'/zoneA/dayTemp/set':'zoneADayTargetTemp',
-			'/zoneA/nightTemp/set':'zoneANightTargetTemp',
-			'/zoneA/antiiceTemp/set':'zoneAAntiiceTargetTemp',
-			'/zoneB/dayTemp/set':'zoneBDayTargetTemp',
-			'/zoneB/nightTemp/set':'zoneBNightTargetTemp',
-			'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp'};
-			
-		#remove root of the topic
-		shortTopic=message.topic[len(mqttTopicRoot):]
-
-		#if topic exist
-		if shortTopic in table:
-			#process it
-			setattr(panel,table[shortTopic],value);
-			logger.info(shortTopic+' : '+str(value));
-		else:
-			logger.warning('Unknown topic : '+shortTopic);
-
-		
+		if (message.topic[-8:]=='Temp/set'):
+			tempSet(client, userdata, message);
+		elif (message.topic[-8:]=='mode/set'):
+			modeSet(client, userdata, message);
 	except BaseException as exc:	
 		logger.exception(exc);
 
@@ -164,7 +185,7 @@ if __name__ == '__main__':
 		#last will
 		client.will_set(mqttTopicRoot,"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
-		client.message_callback_add(mqttTopicRoot+'/+/+/set',tempSet)
+		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)		
 		client.loop_start()
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);

@@ -22,8 +22,13 @@ class RegisterSet:
 	address=0;
 	data=list();
 	
+	def __init__(self,address,data):
+		self.address=address;
+		self.data=data;
+		
 	def __str__(self):
 		return('Reg:'+str(self.address)+' data: '+str(self.data));
+		
   
 class slaveRequest:
 	FRAME_MIN_LENGTH=0x08;

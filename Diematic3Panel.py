@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import threading
+import threading,queue
 import logging, logging.config
 import DDModbus
 import time,datetime,pytz
@@ -21,10 +21,13 @@ TEMP_MAX_ECS=80
 TEMP_MIN_INT=5
 TEMP_MAX_INT=30
 
+#definition for state machine used for modBus data exchange
 class DDModBusStatus(IntEnum):
 	INIT=0;
 	SLAVE=1;
 	MASTER=2;
+	
+#definition of Diematic Register used to read/write functionnal attributes values
 
 class DDREGISTER(IntEnum):
 	CTRL=3;
@@ -62,7 +65,9 @@ class DDREGISTER(IntEnum):
 	PUMP_POWER=463;
 	ALARME=465;
 	
-	
+#This class allow to read/write parameters to Diematic regulator with the helo of a RS485/TCPIP converter
+#refresh of attributes From regulator is done roughly every minute
+#update request to the regulator are done within 10 s and trigger a whole read refresh
 class Diematic3Panel:
 	updateCallback=None;
 
@@ -71,7 +76,7 @@ class Diematic3Panel:
 		#logger
 		self.logger = logging.getLogger(__name__);
 		
-		#interface init
+		#RS485 converter connexion and init
 		self.modBusInterface=DDModbus.DDModbus(ip,port);
 		self.modBusInterface.clean();
 		
@@ -81,23 +86,24 @@ class Diematic3Panel:
 		#timezone
 		self.boilerTimezone=boilerTimezone;
 		
-		#status init to master state
+		#state machine initialisation
 		self.busStatus=DDModBusStatus.INIT;
 		
-		#table for register write request is empty
-		self.regUpdateRequest=list();
-		# specific Mode request
-		self.zoneAModeRequest=None;
-		self.modeBRequest=None;
-		self.hotWaterModeRequest=None
+		#queue for generic register write request
+		self.regUpdateRequest=queue.Queue();
 		
-		#register creation
+		#queues for specific Mode register request
+		self.zoneAModeUpdateRequest=queue.Queue();
+		self.zoneBModeUpdateRequest=queue.Queue();
+		self.hotWaterModeUpdateRequest=queue.Queue();	
+		
+		#dictionnary used to save registers data read from the regulator
 		self.registers=dict();
 		
-		#regulator attributes
+		#init values of functionnal attributes
 		self.initRegulator();
 		
-		#refreshRequest
+		#init refreshRequest flag
 		self.refreshRequest=False;
 		
 	def initRegulator(self):
@@ -128,24 +134,23 @@ class Diematic3Panel:
 		self._zoneANightTargetTemp=None;
 		self._zoneAAntiiceTargetTemp=None;
 		self.zoneBTemp=None;
-		self.zoneBMode=None;
+		self._zoneBMode=None;
 		self.zoneBPump=None;
 		self._zoneBDayTargetTemp=None;
 		self._zoneBNightTargetTemp=None;
 		self._zoneBAntiiceTargetTemp=None;
 
+
+#this setter/getter are used to read or change values of the regulator
 	@property
 	def hotWaterNightTargetTemp(self):
 			return self._hotWaterNightTargetTemp;
 			
 	@hotWaterNightTargetTemp.setter
 	def hotWaterNightTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_ECS_NUIT.value;
-			#only 5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)];
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_ECS_NUIT.value,[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)]);
+			self.regUpdateRequest.put(reg);
 			
 	@property
 	def hotWaterDayTargetTemp(self):
@@ -153,12 +158,9 @@ class Diematic3Panel:
 			
 	@hotWaterDayTargetTemp.setter
 	def hotWaterDayTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_ECS.value;
-			#only 5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)];
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_ECS.value,[min(max(round(x/5)*50,TEMP_MIN_ECS*10),TEMP_MAX_ECS*10)]);
+			self.regUpdateRequest.put(reg);
 			
 	@property
 	def zoneAAntiiceTargetTemp(self):
@@ -166,25 +168,19 @@ class Diematic3Panel:
 			
 	@zoneAAntiiceTargetTemp.setter
 	def zoneAAntiiceTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_ANTIGEL_A.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
-
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_ANTIGEL_A.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);
+			self.regUpdateRequest.put(reg);
+			
 	@property
 	def zoneANightTargetTemp(self):
 			return self._zoneANightTargetTemp;
 			
 	@zoneANightTargetTemp.setter
 	def zoneANightTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_NUIT_A.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_NUIT_A.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);	
+			self.regUpdateRequest.put(reg);
 			
 	@property
 	def zoneADayTargetTemp(self):
@@ -192,12 +188,9 @@ class Diematic3Panel:
 			
 	@zoneADayTargetTemp.setter
 	def zoneADayTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_JOUR_A.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_JOUR_A.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);
+			self.regUpdateRequest.put(reg);
 
 	@property
 	def zoneBAntiiceTargetTemp(self):
@@ -205,12 +198,9 @@ class Diematic3Panel:
 			
 	@zoneBAntiiceTargetTemp.setter
 	def zoneBAntiiceTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_ANTIGEL_B.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_ANTIGEL_B.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);
+			self.regUpdateRequest.put(reg);
 
 	@property
 	def zoneBNightTargetTemp(self):
@@ -218,12 +208,9 @@ class Diematic3Panel:
 			
 	@zoneBNightTargetTemp.setter
 	def zoneBNightTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_NUIT_B.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_NUIT_B.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);
+			self.regUpdateRequest.put(reg);
 			
 	@property
 	def zoneBDayTargetTemp(self):
@@ -231,12 +218,9 @@ class Diematic3Panel:
 			
 	@zoneBDayTargetTemp.setter
 	def zoneBDayTargetTemp(self,x):
-			#register structure creation
-			reg=DDModbus.RegisterSet();
-			reg.address=DDREGISTER.CONS_JOUR_B.value;
-			#only 0.5 multiple are usable, temp is in tenth of degree
-			reg.data=[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)];	
-			self.regUpdateRequest.append(reg);
+			#register structure creation, only 0.5 multiple are usable, temp is in tenth of degree
+			reg=DDModbus.RegisterSet(DDREGISTER.CONS_JOUR_B.value,[min(max(round(2*x)*5,TEMP_MIN_INT*10),TEMP_MAX_INT*10)]);	
+			self.regUpdateRequest.put(reg);
 
 	@property
 	def zoneAMode(self):
@@ -244,39 +228,61 @@ class Diematic3Panel:
 			
 	@zoneAMode.setter
 	def zoneAMode(self,x):
-		self.logger.debug('zone A mode :'+str(x));
+		
+		#request mode A register change depending mode requested
+		self.logger.debug('zone A mode requested:'+str(x));	
 		if (x=='AUTO'):
-			self.zoneAModeRequest=8;
+			self.zoneAModeUpdateRequest.put(8);
 		elif (x=='TEMP JOUR'):
-			self.zoneAModeRequest=36;
+			self.zoneAModeUpdateRequest.put(36);
 		elif (x=='TEMP NUIT'):
-			self.logger.debug('OK zone A mode :'+x);
-			self.zoneAModeRequest=34;
+			self.zoneAModeUpdateRequest.put(34);
 		elif (x=='PERM JOUR'):
-			self.zoneAModeRequest=4;
+			self.zoneAModeUpdateRequest.put(4);
 		elif (x=='PERM NUIT'):
-			self.zoneAModeRequest=2;
+			self.zoneAModeUpdateRequest.put(2);
 		elif (x=='ANTIGEL'):
-			self.zoneAModeRequest=1;
-		else:
-			self.zoneAModeRequest=None;
-
+			self.zoneAModeUpdateRequest.put(1);
+	@property
+	def zoneBMode(self):
+			return self._zoneBMode;
+			
+	@zoneBMode.setter
+	def zoneAMode(self,x):
+		
+		#request mode B register change depending mode requested
+		self.logger.debug('zone B mode requested:'+str(x));	
+		if (x=='AUTO'):
+			self.zoneBModeUpdateRequest.put(8);
+		elif (x=='TEMP JOUR'):
+			self.zoneBModeUpdateRequest.put(36);
+		elif (x=='TEMP NUIT'):
+			self.zoneBModeUpdateRequest.put(34);
+		elif (x=='PERM JOUR'):
+			self.zoneBModeUpdateRequest.put(4);
+		elif (x=='PERM NUIT'):
+			self.zoneBModeUpdateRequest.put(2);
+		elif (x=='ANTIGEL'):
+			self.zoneBModeUpdateRequest.put(1);
+			
 	@property
 	def hotWaterMode(self):
 			return self._hotWaterMode;
 			
 	@hotWaterMode.setter
 	def hotWaterMode(self,x):
-		self.logger.debug('zone A mode :'+str(x));
+			
+		#request hotwater mode register change depending mode requested
+		self.logger.debug('hot water mode requested:'+str(x));	
 		if (x=='AUTO'):
-			self.hotWaterModeRequest=0;
+			self.hotWaterModeUpdateRequest.put(0);
 		elif (x=='TEMP'):
-			self.hotWaterModeRequest=0x50;
+			self.hotWaterModeUpdateRequest.put(0x50);
 		elif (x=='PERM'):
-			self.hotWaterModeRequest=0x10;
-		else:
-			self.hotWaterMode=None;
+			self.hotWaterModeUpdateRequest.put(0x10);
+							
 
+#this property is used to get register values from the regulator
 	def refreshRegisters(self):
 		#update registers 1->63
 		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,1,63);
@@ -303,14 +309,16 @@ class Diematic3Panel:
 			return(True);
 		else:
 			return(False);
-	
+
+#decoding property to decode Modbus encoded float values	
 	def float10(self,reg):
 		if (reg==0xFFFF):
 			return None;
 		if (reg >= 0x8000):
 			reg=-(reg & 0x7FFF)
 		return(reg*0.1);
-	
+
+#this property is used to refresh class functionnal attributes with data extracted from the regulator	
 	def refreshAttributes(self):
 		FAN_SPEED_MIN=1000;
 		FAN_SPEED_MAX=6000;
@@ -371,6 +379,7 @@ class Diematic3Panel:
 		self.zoneATemp=self.float10(self.registers[DDREGISTER.TEMP_AMB_A]);
 		if ( self.zoneATemp is not None):
 			modeA=self.registers[DDREGISTER.MODE_A]& 0x2F;
+			
 			if (modeA==8):
 				self._zoneAMode='AUTO';
 			elif (modeA==36):
@@ -383,7 +392,7 @@ class Diematic3Panel:
 				self._zoneAMode='PERM NUIT';
 			elif (modeA==1):
 				self._zoneAMode='ANTIGEL';
-				
+								
 			self.zoneAPump=(self.registers[DDREGISTER.BASE_ECS] & 0x10) >>4;
 			self._zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
 			self._zoneANightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_A]);
@@ -402,17 +411,17 @@ class Diematic3Panel:
 		if ( self.zoneBTemp is not None):
 			modeB=self.registers[DDREGISTER.MODE_B]& 0x2F;
 			if (modeB==8):
-				self.zoneBMode='AUTO';
+				self._zoneBMode='AUTO';
 			elif (modeB==36):
-				self.zoneBMode='TEMP JOUR';
+				self._zoneBMode='TEMP JOUR';
 			elif (modeB==34):
-				self.zoneBMode='TEMP NUIT';
+				self._zoneBMode='TEMP NUIT';
 			elif (modeB==4):
-				self.zoneBMode='PERM JOUR';
+				self._zoneBMode='PERM JOUR';
 			elif (modeB==2):
-				self.zoneBMode='PERM NUIT';
+				self._zoneBMode='PERM NUIT';
 			elif (modeB==1):
-				self.zoneBMode='ANTIGEL';
+				self._zoneBMode='ANTIGEL';
 				
 			self.zoneBPump=(self.registers[DDREGISTER.OPTIONS_B_C] & 0x10) >>4;
 			self._zoneBDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_B]);
@@ -420,14 +429,112 @@ class Diematic3Panel:
 			self._zoneBAntiiceTempTarget=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_B]);
 
 		else:
-			self.zoneBMode=None;
+			self._zoneBMode=None;
 			self.zoneBPump=None;
 			self._zoneBDayTargetTemp=None;
 			self._zoneBNightTempTarget=None;
 			self._zoneBAntiiceTempTarget=None;
 
 		self.updateCallback();
-	
+
+
+#this property is used by the Modbus loop to set register dedicated to Mode A and hotwater mode (in case of no usage of B area)		
+	def modeAUpdate(self):
+		#if mode A register update request is pending
+		if (not(self.zoneAModeUpdateRequest.empty()) or (not(self.hotWaterModeUpdateRequest.empty()) and (self.zoneBMode is None))):
+			#get current mode
+			currentMode=self.modBusInterface.masterReadAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,1);
+			#in case of success
+			if (currentMode):
+				mode=currentMode[DDREGISTER.MODE_A];
+				self.logger.info('Mode A current value :'+str(mode));
+				
+				#update mode with mode requests					
+				if (not(self.zoneAModeUpdateRequest.empty())):
+					mode= (mode & 0x50) | self.zoneAModeUpdateRequest.get();
+					
+				if (not(self.hotWaterModeUpdateRequest.empty()) and (self.zoneBMode is None)):
+					mode= (mode & 0x2F) | self.hotWaterModeUpdateRequest.get();
+
+				self.logger.info('Mode A next value :'+str(mode));
+				#specific case for antiice request
+				#following write procedure is an empirical solution to have remote control refresh while updating mode
+				if (mode==1):
+					#set antiice day number to 1
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					time.sleep(0.5);
+					#set antiice day number to 0
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+					#set mode A number to requested value
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+
+				#general case
+				#following write procedure is an empirical solution to have remote control refresh while updating mode
+				else:
+					#set mode A
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+					#set antiice day number to 1
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					#set mode A again
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+					time.sleep(0.5);
+					#set mode A again
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
+					#set antiice day number to 0
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+			
+				#request register refresh
+				self.refreshRequest=True;
+
+#this property is used by the Modbus loop to set register dedicated to Mode B and hotwater mode (in case of usage of B area)					
+	def modeBUpdate(self):
+		#if mode B register update request is pending
+		if (not(self.zoneBModeUpdateRequest.empty()) or (not(self.hotWaterModeUpdateRequest.empty()) and (self.zoneBMode))):
+			#get current mode
+			currentMode=self.modBusInterface.masterReadAnalog(self.regulatorAddress,DDREGISTER.MODE_B.value,1);
+			#in case of success
+			if (currentMode):
+				mode=currentMode[DDREGISTER.MODE_B];
+				self.logger.info('Mode B current value :'+str(mode));
+				
+				#update mode with mode requests					
+				if (not(self.zoneBModeUpdateRequest.empty())):
+					mode= (mode & 0x50) | self.zoneBModeUpdateRequest.get();
+					
+				if (not(self.hotWaterModeUpdateRequest.empty()) and (self.zoneBMode)):
+					mode= (mode & 0x2F) | self.hotWaterModeUpdateRequest.get();
+
+				self.logger.info('Mode B next value :'+str(mode));
+				#specific case for antiice request
+				#following write procedure is an empirical solution to have remote control refresh while updating mode
+				if (mode==1):
+					#set antiice day number to 1
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					time.sleep(0.5);
+					#set antiice day number to 0
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+					#set mode B number to requested value
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_B.value,[mode]);
+
+				#general case
+				#following write procedure is an empirical solution to have remote control refresh while updating mode
+				else:
+					#set mode B
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_B.value,[mode]);
+					#set antiice day number to 1
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					#set mode B again
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_B.value,[mode]);
+					time.sleep(0.5);
+					#set mode B again
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_B.value,[mode]);
+					#set antiice day number to 0
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+			
+				#request refresh
+				self.refreshRequest=True;					
+
+#modbus loop, shall run in a specific thread. Allow to exchange register values with the Dielatic regulator
 	def loop(self):
 		try:
 			self.masterSlaveSynchro=False 
@@ -442,14 +549,15 @@ class Diematic3Panel:
 					if (frame):
 						#switch mode to slave
 						self.busStatus=DDModBusStatus.SLAVE;
-						self.SlaveTime=time.time();
+						self.slaveTime=time.time();
 						self.logger.debug('Bus status switched to SLAVE');
 						
 				elif (self.busStatus==DDModBusStatus.SLAVE):
-					slaveModeDuration=time.time()-self.SlaveTime;
+					slaveModeDuration=time.time()-self.slaveTime;
 					#if no frame have been received and slave happen during at least 5s
 					if ((not frame) and (slaveModeDuration>5)):
 						#switch mode to MASTER
+						self.masterTime=time.time();
 						self.busStatus=DDModBusStatus.MASTER;
 						self.logger.debug('Bus status switched to MASTER after '+str(slaveModeDuration));
 						
@@ -458,66 +566,21 @@ class Diematic3Panel:
 							self.logger.info('ModBus Master Slave Synchro OK');
 							self.masterSlaveSynchro=True;
 							
-						#if mode A register update request is pending
-						if (not(self.zoneAModeRequest is None) or not(self.hotWaterModeRequest is None)):
-							#get current mode
-							currentMode=self.modBusInterface.masterReadAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,1);
-							#in case of success
-							if (currentMode):
-								mode=currentMode[DDREGISTER.MODE_A];
-								self.logger.debug('Mode A current value :'+str(mode));
+						#mode A register update if needed
+						self.modeAUpdate();
+						
+						#mode B register update if needed
+						self.modeBUpdate();
 								
-								#update mode with mode requests
-								if (not(self.zoneAModeRequest is None)):
-									mode= (mode & 0x50) | self.zoneAModeRequest;
-								if (not(self.hotWaterModeRequest is None)):
-									mode= (mode & 0x2F) | self.hotWaterModeRequest;
-								
-								#close request
-								self.zoneAModeRequest=None;
-								self.hotWaterModeRequest=None;
-								
-								
-								self.logger.debug('Mode A next value :'+str(mode));
-								#specific case for antiice request
-								#following write procedure is an empirical solution to have remote control refresh while updating mode
-								if (mode==1):
-									#set antiice day number to 1
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
-									time.sleep(0.5);
-									#set antiice day number to 0
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
-									#set mode A number to requested value
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
-
-								#general case
-								#following write procedure is an empirical solution to have remote control refresh while updating mode
-								else:
-									#set mode A
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
-									#set antiice day number to 1
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
-									#set mode A again
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
-									time.sleep(0.5);
-									#set mode A again
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_A.value,[mode]);
-									#set antiice day number to 0
-									self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
-							
-								#request refresh
-								self.refreshRequest=True;
-								
-						#if general register update request are pending
-						if (self.regUpdateRequest):
-							for regSet in self.regUpdateRequest:
-								self.logger.debug('Write Request :'+str(regSet.address)+':'+str(regSet.data));
-								#write to Analog registers
-								if ( not self.modBusInterface.masterWriteAnalog(self.regulatorAddress,regSet.address,regSet.data)):
-									#And cancel Master Slave Synchro Flag in case of error
-									self.logger.warning('ModBus Master Slave Synchro Error');
-									self.masterSlaveSynchro=False;
-							self.regUpdateRequest=list();
+						#while general register update request are pending and Master mode is started since less than 2s
+						while (not(self.regUpdateRequest.empty()) and ((time.time()-self.masterTime) < 2)):
+							regSet=self.regUpdateRequest.get(False)
+							self.logger.debug('Write Request :'+str(regSet.address)+':'+str(regSet.data));
+							#write to Analog registers
+							if ( not self.modBusInterface.masterWriteAnalog(self.regulatorAddress,regSet.address,regSet.data)):
+								#And cancel Master Slave Synchro Flag in case of error
+								self.logger.warning('ModBus Master Slave Synchro Error');
+								self.masterSlaveSynchro=False;
 							self.refreshRequest=True;
 							
 						
@@ -544,12 +607,13 @@ class Diematic3Panel:
 					self.refreshRequest=True;
 		except BaseException as exc:		
 			self.logger.exception(exc)
-				
+
+#property used to launch Modbus loop			
 	def loop_start(self):
 			self.loopThread = threading.Thread(target=self.loop)
 			self.loopThread.start();
-
-		
+			
+#property used to stop Modbus loop	
 	def loop_stop(self):
 		self.run=False;
 		self.loopThread.join();

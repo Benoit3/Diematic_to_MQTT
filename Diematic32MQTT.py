@@ -1,7 +1,7 @@
 ﻿#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys,threading
+import sys,signal,threading
 import configparser
 import logging, logging.config
 import DDModbus,Diematic3Panel
@@ -166,6 +166,16 @@ def paramSet(client, userdata, message):
 	except BaseException as exc:	
 		logger.exception(exc);
 
+class GracefulKiller:
+	def __init__(self):
+		self.run=True;
+		signal.signal(signal.SIGINT, self.exit_gracefully);
+		signal.signal(signal.SIGTERM, self.exit_gracefully);
+
+	def exit_gracefully(self, *args):
+		logger.critical('Stop requested');
+		self.run = False;
+
 if __name__ == '__main__':
 
 	# Initialisation Logger
@@ -214,26 +224,18 @@ if __name__ == '__main__':
 		#start modbus thread
 		panel.loop_start();
 		
-		try:
-			run=True;
-			while run:
-				#check every 10s that all threads are living
-				time.sleep(10);
-				if (threading.active_count()!=3):
-					logger.critical('At least one process has been killed, stop launched');
-					#if not stop modbus thread
-					panel.loop_stop();
-					
-					#disconnect mqtt server
-					client.loop_stop();
-					run=False;
-			sys.exit(1);
-		except KeyboardInterrupt:
-			print('stop panel');
-			panel.loop_stop();
-			print('Disconnecting from MQTT broker');
-			client.loop_stop();
-			logger.critical('Stop requested');
+		killer = GracefulKiller();
+		while killer.run:
+			#check every 10s that all threads are living
+			time.sleep(10);
+			if (threading.active_count()!=3):
+				logger.critical('At least one process has been killed, stop launched');
+				killer.run=False;
+		#stop modbus thread
+		panel.loop_stop();		
+		#disconnect mqtt server
+		client.loop_stop();
+		logger.critical('Stopped');
 			
 	except BaseException as exc:	
 		logger.exception(exc);

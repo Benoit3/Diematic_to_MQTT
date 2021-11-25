@@ -108,7 +108,7 @@ class Diematic3Panel:
 		
 	def initRegulator(self):
 		#regulator attributes
-		self.datetime=None;
+		self._datetime=None;
 		self.type=None;
 		self.release=None;
 		self.extTemp=None;
@@ -248,7 +248,7 @@ class Diematic3Panel:
 			return self._zoneBMode;
 			
 	@zoneBMode.setter
-	def zoneAMode(self,x):
+	def zoneBMode(self,x):
 		
 		#request mode B register change depending mode requested
 		self.logger.debug('zone B mode requested:'+str(x));	
@@ -280,8 +280,22 @@ class Diematic3Panel:
 			self.hotWaterModeUpdateRequest.put(0x50);
 		elif (x=='PERM'):
 			self.hotWaterModeUpdateRequest.put(0x10);
-							
-
+	
+	@property
+	def datetime(self):
+			return self._datetime;
+			
+	@datetime.setter
+	def datetime(self,x):
+		#request hour/minute/weekday registers change
+		self.logger.debug('datetime requested:'+x.astimezone(pytz.timezone(self.boilerTimezone)).isoformat());
+		reg=DDModbus.RegisterSet(DDREGISTER.HEURE.value,[x.hour,x.minute,x.isoweekday()]);
+		self.regUpdateRequest.put(reg);
+		
+		#request day/month/year registers change
+		reg=DDModbus.RegisterSet(DDREGISTER.JOUR.value,[x.day,x.month,(x.year % 100)]);
+		self.regUpdateRequest.put(reg);
+		
 #this property is used to get register values from the regulator
 	def refreshRegisters(self):
 		#update registers 1->63
@@ -324,7 +338,7 @@ class Diematic3Panel:
 		FAN_SPEED_MAX=6000;
 		
 		#boiler
-		self.datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0,pytz.timezone(self.boilerTimezone));
+		self._datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0,pytz.timezone(self.boilerTimezone));
 		self.type=self.registers[DDREGISTER.BOILER_TYPE];
 		self.release=self.registers[DDREGISTER.CTRL];
 		self.extTemp=self.float10(self.registers[DDREGISTER.TEMP_EXT]);
@@ -391,8 +405,7 @@ class Diematic3Panel:
 			elif (modeA==2):
 				self._zoneAMode='PERM NUIT';
 			elif (modeA==1):
-				self._zoneAMode='ANTIGEL';
-								
+				self._zoneAMode='ANTIGEL';			
 			self.zoneAPump=(self.registers[DDREGISTER.BASE_ECS] & 0x10) >>4;
 			self._zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
 			self._zoneANightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_A]);

@@ -7,7 +7,7 @@ import logging, logging.config
 import DDModbus,Diematic3Panel
 import paho.mqtt.client as mqtt
 import json
-import time
+import time,datetime
 
 class MessageBuffer:
 	def __init__(self,mqtt):
@@ -91,6 +91,7 @@ def on_connect(client, userdata, flags, rc):
 	print('Connected to MQTT broker');
 	#subscribe to control messages with Q0s of 2
 	client.subscribe(mqttTopicRoot+'/+/+/set',2);
+	client.subscribe(mqttTopicRoot+'/date/set',2);
 	
 def modeSet(client, userdata, message):
 	#table for topic to attribute bind
@@ -137,6 +138,22 @@ def tempSet(client, userdata, message):
 	else:
 		logger.warning('Unknown topic : '+shortTopic);
 
+def dateSet(client, userdata, message):
+	#table for topic to attribute bind
+	table={'/date/set':'datetime'};
+		
+	#remove root of the topic
+	shortTopic=message.topic[len(mqttTopicRoot):]
+	
+	#if topic exist
+	if shortTopic in table:
+		#process it
+		logger.info(shortTopic+' : '+str(message.payload));
+		if (message.payload.decode()=='Now'):
+			setattr(panel,table[shortTopic],datetime.datetime.now().astimezone());
+	else:
+		logger.warning('Unknown topic : '+shortTopic);
+
 def paramSet(client, userdata, message):
 	try:
 		logger.debug('MQTT msg received :'+message.topic+' '+str(message.payload));
@@ -144,6 +161,8 @@ def paramSet(client, userdata, message):
 			tempSet(client, userdata, message);
 		elif (message.topic[-8:]=='mode/set'):
 			modeSet(client, userdata, message);
+		elif (message.topic[-8:]=='date/set'):
+			dateSet(client, userdata, message);
 	except BaseException as exc:	
 		logger.exception(exc);
 
@@ -185,7 +204,8 @@ if __name__ == '__main__':
 		#last will
 		client.will_set(mqttTopicRoot,"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
-		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)		
+		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)
+		client.message_callback_add(mqttTopicRoot+'/date/set',paramSet)		
 		client.loop_start()
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);

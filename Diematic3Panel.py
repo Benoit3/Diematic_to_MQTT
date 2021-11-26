@@ -287,8 +287,11 @@ class Diematic3Panel:
 			
 	@datetime.setter
 	def datetime(self,x):
+		#switch time to boiler timezone
+		x=x.astimezone(pytz.timezone(self.boilerTimezone));
+		
 		#request hour/minute/weekday registers change
-		self.logger.debug('datetime requested:'+x.astimezone(pytz.timezone(self.boilerTimezone)).isoformat());
+		self.logger.debug('datetime requested:'+x.isoformat());
 		reg=DDModbus.RegisterSet(DDREGISTER.HEURE.value,[x.hour,x.minute,x.isoweekday()]);
 		self.regUpdateRequest.put(reg);
 		
@@ -618,6 +621,7 @@ class Diematic3Panel:
 					self.initRegulator();
 					self.updateCallback();
 					self.refreshRequest=True;
+			self.logger.critical('Modbus Thread stopped');
 		except BaseException as exc:		
 			self.logger.exception(exc)
 

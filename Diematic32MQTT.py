@@ -93,6 +93,9 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe(mqttTopicRoot+'/+/+/set',2);
 	client.subscribe(mqttTopicRoot+'/date/set',2);
 	
+def on_disconnect(client, userdata, rc):
+	logger.critical('Diconnected from MQTT broker');
+	
 def modeSet(client, userdata, message):
 	#table for topic to attribute bind
 	table={'/hotWater/mode/set':'hotWaterMode',
@@ -166,21 +169,19 @@ def paramSet(client, userdata, message):
 	except BaseException as exc:	
 		logger.exception(exc);
 
-class GracefulKiller:
-	def __init__(self):
-		self.run=True;
-		signal.signal(signal.SIGINT, self.exit_gracefully);
-		signal.signal(signal.SIGTERM, self.exit_gracefully);
+def sigterm_exit(signum, frame):
+		logger.critical('Stop requested by SIGTERM, raising KeyboardInterrupt');
+		raise KeyboardInterrupt;
 
-	def exit_gracefully(self, *args):
-		logger.critical('Stop requested');
-		self.run = False;
 
 if __name__ == '__main__':
 
 	# Initialisation Logger
 	logging.config.fileConfig('logging.conf');
 	logger = logging.getLogger(__name__);
+	
+	#Sigterm trapping
+	signal.signal(signal.SIGTERM, sigterm_exit);
 	try:
 		#Initialisation config
 		config = configparser.ConfigParser()
@@ -211,6 +212,7 @@ if __name__ == '__main__':
 		#init mqtt brooker
 		client = mqtt.Client()
 		client.on_connect = on_connect
+		client.on_disconnect = on_disconnect
 		#last will
 		client.will_set(mqttTopicRoot,"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
@@ -223,20 +225,24 @@ if __name__ == '__main__':
 
 		#start modbus thread
 		panel.loop_start();
-		
-		killer = GracefulKiller();
-		while killer.run:
+		run=True;
+		while run:
 			#check every 10s that all threads are living
-			time.sleep(10);
+			time.sleep(5);
 			if (threading.active_count()!=3):
 				logger.critical('At least one process has been killed, stop launched');
-				killer.run=False;
+				run=False;
 		#stop modbus thread
 		panel.loop_stop();		
 		#disconnect mqtt server
 		client.loop_stop();
 		logger.critical('Stopped');
-			
+	except KeyboardInterrupt:
+		#stop modbus thread
+		panel.loop_stop();		
+		#disconnect mqtt server
+		client.loop_stop();
+		logger.critical('Stopped by KeyboardInterrupt');
 	except BaseException as exc:	
 		logger.exception(exc);
 

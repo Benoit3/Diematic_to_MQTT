@@ -29,8 +29,10 @@ class MessageBuffer:
 				#send message without trailing / on topic
 				if (topic!=''):
 					self.mqtt.publish(mqttTopicRoot+'/'+topic,self.buffer[topic]['value'],1,True);
+					self.logger.info('Publish :'+mqttTopicRoot+'/'+topic+' '+self.buffer[topic]['value'])
 				else:
 					self.mqtt.publish(mqttTopicRoot,self.buffer[topic]['value'],1,True);
+					self.logger.info('Publish :'+mqttTopicRoot+'/'+topic+' '+self.buffer[topic]['value'])
 				#set the flag to False
 				self.buffer[topic]['update']=False;
 	

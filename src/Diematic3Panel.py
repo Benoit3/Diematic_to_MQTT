@@ -634,3 +634,6 @@ class Diematic3Panel:
 	def loop_stop(self):
 		self.run=False;
 		self.loopThread.join();
+		#reinit Regulator
+		self.initRegulator();
+		self.updateCallback();

@@ -32,7 +32,7 @@ class MessageBuffer:
 					self.logger.info('Publish :'+mqttTopicRoot+'/'+topic+' '+self.buffer[topic]['value'])
 				else:
 					self.mqtt.publish(mqttTopicRoot,self.buffer[topic]['value'],1,True);
-					self.logger.info('Publish :'+mqttTopicRoot+'/'+topic+' '+self.buffer[topic]['value'])
+					self.logger.info('Publish :'+mqttTopicRoot+' '+self.buffer[topic]['value'])
 				#set the flag to False
 				self.buffer[topic]['update']=False;
 	
@@ -241,7 +241,8 @@ if __name__ == '__main__':
 		logger.critical('Stopped');
 	except KeyboardInterrupt:
 		#stop modbus thread
-		panel.loop_stop();		
+		panel.loop_stop();
+
 		#disconnect mqtt server
 		client.loop_stop();
 		logger.critical('Stopped by KeyboardInterrupt');

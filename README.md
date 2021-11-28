@@ -76,7 +76,21 @@ You need to configure Diematic32MQTT.conf file with :
 You can also configure the log level in the logging.conf file.
 To run the script you just have to launch python3 Diematic32MQTT.py
 
-You can follow log in real time with tail -f log.out
+You can follow log in real time with:
+
+tail -f log.out
+
+<h3>To display MQTT message send</h3>
+Use mosquitto_sub command:
+
+mosquitto_sub -h raspdom -v -t 'home/#'
+
+<h3>To send MQTT message to the boiler</h3>
+Use mosquitto_pub command.Exemple, to set the regulator in temporary day mode:
+
+mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
+
+
 
 <h3>To run as a service under Raspbian</h3>
 

@@ -83,14 +83,14 @@ tail -f log.out
 <h3>To display MQTT message send</h3>
 Use mosquitto_sub command:
 
-mosquitto_sub -h raspdom -v -t 'home/#'
+mosquitto_sub -h localhost -v -t 'home/#'
 
 Remark: as modbus switch between slave and master mode, you may have to wait up to 10s to have your command taken into account
 
 <h3>To send MQTT message to the boiler</h3>
 Use mosquitto_pub command. Exemple, to set the regulator in temporary day mode:
 
-mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
+mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
 
 List of MQTT message topics to set temperatures is :
 - home/heater/boiler/hotWater/dayTemp/set
@@ -103,7 +103,7 @@ List of MQTT message topics to set temperatures is :
 
 exemple:
 
-    mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/dayTemp/set -m 21.0
+    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/dayTemp/set -m 21.0
 
 List of MQTT message topics to set modes is :
 
@@ -128,8 +128,8 @@ Available modes for hotwater are (sorry they are in french, but still easy to un
 - 
 exemple:
 
-    mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/mode/set -m 'PERM_NUIT'
-    mosquitto_pub -h raspdom -t home/heater/boiler/hotWater/mode/set -m 'TEMP'
+    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'PERM_NUIT'
+    mosquitto_pub -h localhost -t home/heater/boiler/hotWater/mode/set -m 'TEMP'
 
 To synchronize the boiler clock to the interface clock:
 - home/heater/boiler/date/set
@@ -139,7 +139,7 @@ Unique value is :
 
 exemple:
 
-    mosquitto_pub -h raspdom -t home/heater/boiler/date/set -m 'Now'
+    mosquitto_pub -h localhost -t home/heater/boiler/date/set -m 'Now'
 
 <h3>To run as a service under Raspbian</h3>
 

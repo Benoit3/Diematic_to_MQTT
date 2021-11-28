@@ -81,10 +81,15 @@ You can follow log in real time with tail -f log.out
 <h3>To run as a service under Raspbian</h3>
 
 as root, copy and adapt (varying choosen file directory) Diematic32MQTT.service to /etc/systemd/system/ directory
+
 sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service
+
 chmod +x Diematic32MQTT.py
+
 sudo systemctl daemon-reload
+
 sudo systemctl enable Diematic32MQTT.service
+
 sudo systemctl start Diematic32MQTT.service
 
 <h3>Limitations</h3>

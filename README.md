@@ -59,7 +59,7 @@ You can now go on with setting the USR-TCP-232-306  module with a standard web b
 
 Remark : I let you read the doc to configure IP parameters of the USR-TCP-232-306. The TCP server address of the above page is not used
 
-<h3>Python script deployment pages deployment</h3>
+<h3>Python script deployment</h3>
 
 Python pytz module is needed.
 
@@ -89,7 +89,7 @@ sudo systemctl start Diematic32MQTT.service
 
 <h3>Limitations</h3>
 
-With this release 313 (boiler bought end of 2006), and this version 1.4 of pages, previous limitations has been solved with sometimes the help of workaround. Temporary anti freezing, is no more available as it was not correctly settable through the Diematic 3 Modbus interface, but permanent antifreezing mode has replaced it. Notice that, in this case the remote control shows below display, which is normal (you can get it with the mode button selecting antifreeze during 5s) :
+With this release 313 (boiler bought end of 2006), some limitations has been solved with sometimes the help of workaround. Temporary anti freezing, is no more available as it was not correctly settable through the Diematic 3 Modbus interface, but permanent antifreezing mode has replaced it. Notice that, in this case the remote control shows below display, which is normal (you can get it with the mode button selecting antifreeze during 5s) :
 ![AntiFreeze](ReadMeImages/AntiFreeze.png)
 
 Main found limitations of the Diematic 3 interfaces are :
@@ -99,17 +99,4 @@ Main found limitations of the Diematic 3 interfaces are :
 - no possibility to use without issue temporary freezing mode
 - pump power stays at 100% when all pumps are off
 
-<h3>Miscellaneous</h3>
-I've not been successfull to be able to modify the heating program to use ( P1..P4) or to set a temporary antifreeze mode for a given number of day.
-
-The call of url index.php?log=1 allows to display log of ModBus data exchanged.
-
 For further info you can go to [Fibaro forum](https://www.domotique-fibaro.fr/topic/5677-de-dietrich-diematic-isystem/)
-
-
-as root, copy and adapt Diematic32MQTT.service to /etc/systemd/system/ directory
-sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service
-chmod +x /home/pi/Diematic32MQTT/Diematic32MQTT.py
-sudo systemctl daemon-reload
-sudo systemctl enable Diematic32MQTT.service
-sudo systemctl start Diematic32MQTT.service

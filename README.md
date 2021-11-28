@@ -101,6 +101,10 @@ List of MQTT message topics to set temperatures is :
 - home/heater/boiler/zoneB/nightTemp/set
 - home/heater/boiler/zoneB/antiiceTemp/set
 
+exemple:
+
+    mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/dayTemp/set -m 21.0
+
 List of MQTT message topics to set modes is :
 
 - home/heater/boiler/hotWater/mode/set

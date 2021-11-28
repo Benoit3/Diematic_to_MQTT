@@ -86,11 +86,44 @@ Use mosquitto_sub command:
 mosquitto_sub -h raspdom -v -t 'home/#'
 
 <h3>To send MQTT message to the boiler</h3>
-Use mosquitto_pub command.Exemple, to set the regulator in temporary day mode:
+Use mosquitto_pub command. Exemple, to set the regulator in temporary day mode:
 
 mosquitto_pub -h raspdom -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
 
+List of MQTT message topics to set temperatures is :
+- home/heater/boiler/hotWater/dayTemp/set
+- home/heater/boiler/hotWater/nightTemp/set
+- home/heater/boiler/zoneA/dayTemp/set
+- home/heater/boiler/zoneA/nightTemp/set
+- home/heater/boiler/zoneA/antiiceTemp/set
+- home/heater/boiler/zoneB/nightTemp/set
+- home/heater/boiler/zoneB/antiiceTemp/set
 
+
+List of MQTT message topics to set modes is :
+
+- home/heater/boiler/hotWater/mode/set
+- home/heater/boiler/zoneA/mode/set
+- home/heater/boiler/zoneB/mode/set
+
+Available modes for zone A & B are (sorry they are in french, but still easy to understand):
+- AUTO
+- TEMP JOUR
+- TEMP NUIT
+- PERM JOUR
+- PERM NUIT
+- ANTIGEL
+
+Available modes for hotwater are (sorry they are in french, but still easy to understand):
+- AUTO
+- TEMP
+- PERM
+
+To synchronize the boiler clock to the interface clock:
+- home/heater/boiler/date/set
+
+Unique value is :
+- Now
 
 <h3>To run as a service under Raspbian</h3>
 

@@ -141,6 +141,12 @@ exemple:
 
     mosquitto_pub -h localhost -t home/heater/boiler/date/set -m 'Now'
 
+<h3>To use client Dash MQTT for android</h3>
+
+With this [client](https://play.google.com/store/apps/details?id=net.routix.mqttdash&hl=fr&gl=US) you can get easily custom dashboard like this one:
+
+![Dash MQTT](ReadMeImages/MQTTDash.png)
+
 <h3>To run as a service under Raspbian</h3>
 
 as root, copy and adapt (varying choosen file directory) Diematic32MQTT.service to /etc/systemd/system/ directory

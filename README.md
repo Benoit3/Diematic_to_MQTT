@@ -147,19 +147,24 @@ With this [client](https://play.google.com/store/apps/details?id=net.routix.mqtt
 
 ![Dash MQTT](ReadMeImages/MQTTDash.png)
 
+To import exemple of Tiles :
+- after installation, add a new connexion to your MQTT broker, and select it
+- clic on the double arrow icon on the top banner
+- clic on "Suscribe and wait for metrics" button
+
+Get the MQTT_Dash/Tiles.txt file and then use following command:
+
+    mosquitto_pub -h localhost -t metrics/exchange -f Tiles.txt
+
 <h3>To run as a service under Raspbian</h3>
 
 as root, copy and adapt (varying choosen file directory) Diematic32MQTT.service to /etc/systemd/system/ directory
 
-sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service
-
-chmod +x Diematic32MQTT.py
-
-sudo systemctl daemon-reload
-
-sudo systemctl enable Diematic32MQTT.service
-
-sudo systemctl start Diematic32MQTT.service
+    sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service
+    chmod +x Diematic32MQTT.py
+    sudo systemctl daemon-reload
+    sudo systemctl enable Diematic32MQTT.service
+    sudo systemctl start Diematic32MQTT.service
 
 <h3>Limitations</h3>
 

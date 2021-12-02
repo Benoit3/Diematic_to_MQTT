@@ -50,7 +50,7 @@ def diematic3Publish(self):
 	buffer.update('ext/temp',floatValue(self.extTemp));
 	buffer.update('temp',floatValue(self.temp));
 	buffer.update('targetTemp',floatValue(self.targetTemp));
-	buffer.update('returnTemp',floatValue(self.targetTemp));
+	buffer.update('returnTemp',floatValue(self.returnTemp));
 	buffer.update('waterPressure',floatValue(self.waterPressure));
 	buffer.update('power',intValue(self.burnerPower));
 	buffer.update('smokeTemp',floatValue(self.smokeTemp));

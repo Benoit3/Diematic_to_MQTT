@@ -81,10 +81,7 @@ def diematic3Publish(self):
 	buffer.update('zoneB/dayTemp',floatValue(self.zoneBDayTargetTemp));
 	buffer.update('zoneB/nightTemp',floatValue(self.zoneBNightTargetTemp));
 	buffer.update('zoneB/antiiceTemp',floatValue(self.zoneBAntiiceTargetTemp));
-
-		
-	#status online
-	buffer.update('','Online');
+	
 	#send MQTT messages
 	buffer.send();
 	
@@ -94,6 +91,10 @@ def on_connect(client, userdata, flags, rc):
 	#subscribe to control messages with Q0s of 2
 	client.subscribe(mqttTopicRoot+'/+/+/set',2);
 	client.subscribe(mqttTopicRoot+'/date/set',2);
+	
+	#online publish
+	client.publish(mqttTopicRoot,'Online',1,True);
+	logger.info('Publish :'+mqttTopicRoot+' '+'Online');
 	
 def on_disconnect(client, userdata, rc):
 	logger.critical('Diconnected from MQTT broker');

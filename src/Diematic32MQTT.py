@@ -54,6 +54,7 @@ def diematic3Publish(self):
 	buffer.update('waterPressure',floatValue(self.waterPressure));
 	buffer.update('power',intValue(self.burnerPower));
 	buffer.update('smokeTemp',floatValue(self.smokeTemp));
+	buffer.update('ionizationCurrent',floatValue(self.ionizationCurrent));
 	buffer.update('fanSpeed',intValue(self.fanSpeed));
 	buffer.update('burnerStatus',intValue(self.burnerStatus));
 	buffer.update('pumpPower',intValue(self.pumpPower));

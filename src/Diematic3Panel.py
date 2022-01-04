@@ -57,6 +57,7 @@ class DDREGISTER(IntEnum):
 	ANNEE=110;
 	BASE_ECS=427;
 	OPTIONS_B_C=428;
+	IONIZATION_CURRENT=451;
 	RETURN_TEMP=453;
 	SMOKE_TEMP=454;
 	FAN_SPEED=455;
@@ -76,9 +77,9 @@ class Diematic3Panel:
 		#logger
 		self.logger = logging.getLogger(__name__);
 		
-		#RS485 converter connexion and init
-		self.modBusInterface=DDModbus.DDModbus(ip,port);
-		self.modBusInterface.clean();
+		#RS485 converter connexion parameter saving
+		self.ip=ip;
+		self.port=port;
 		
 		#regulator modbus address
 		self.regulatorAddress=regulatorAddress;
@@ -107,6 +108,10 @@ class Diematic3Panel:
 		self.refreshRequest=False;
 		
 	def initRegulator(self):
+		#RS485 converter connexion init
+		self.modBusInterface=DDModbus.DDModbus(self.ip,self.port);
+		self.modBusInterface.clean();
+		
 		#regulator attributes
 		self._datetime=None;
 		self.type=None;
@@ -119,6 +124,7 @@ class Diematic3Panel:
 		self.burnerPower=None;
 		self.smokeTemp=None;
 		self.fanSpeed=None;
+		self.ionizationCurrent=None
 		self.burnerStatus=None;
 		self.pumpPower=None;
 		self.alarm={'id':None,'txt':None};
@@ -367,8 +373,7 @@ class Diematic3Panel:
 
 #this property is used to refresh class functionnal attributes with data extracted from the regulator	
 	def refreshAttributes(self):
-		FAN_SPEED_MIN=1000;
-		FAN_SPEED_MAX=6000;
+		FAN_SPEED_MAX=5900;
 		
 		#boiler
 		self._datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0,pytz.timezone(self.boilerTimezone));
@@ -379,11 +384,9 @@ class Diematic3Panel:
 		self.targetTemp=self.float10(self.registers[DDREGISTER.TCALC_A]);
 		self.returnTemp=self.float10(self.registers[DDREGISTER.RETURN_TEMP]);
 		self.waterPressure=self.float10(self.registers[DDREGISTER.PRESSION_EAU]);
-		if ( self.registers[DDREGISTER.FAN_SPEED]>= FAN_SPEED_MIN):
-			self.burnerPower=10*round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*10);
-		else:
-			self.burnerPower=0;
+		self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100);
 		self.smokeTemp=self.float10(self.registers[DDREGISTER.SMOKE_TEMP]);
+		self.ionizationCurrent=self.float10(self.registers[DDREGISTER.IONIZATION_CURRENT]);
 		self.fanSpeed=self.registers[DDREGISTER.FAN_SPEED];
 		self.burnerStatus=(self.registers[DDREGISTER.BASE_ECS] & 0x08) >>3;
 		self.pumpPower=self.registers[DDREGISTER.PUMP_POWER];
@@ -647,7 +650,7 @@ class Diematic3Panel:
 								
 				if ((time.time()-self.lastSynchroTimestamp) > VALIDITY_TIME):
 					self.lastSynchroTimestamp=time.time();
-					self.logger.debug('(Re)Init Link with Regulator');
+					self.logger.warning('Synchro timeout => (Re)Init Link with Regulator');
 					self.initRegulator();
 					self.updateCallback();
 					self.refreshRequest=True;

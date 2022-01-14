@@ -106,13 +106,16 @@ class Diematic3Panel:
 		
 		#init refreshRequest flag
 		self.refreshRequest=False;
-		
-	def initRegulator(self):
+	
+	def initConnection(self):
 		#RS485 converter connexion init
 		self.modBusInterface=DDModbus.DDModbus(self.ip,self.port);
+		self.logger.warning('Init Link with Regulator');
 		self.modBusInterface.clean();
-		
+	
+	def initAttributes(self):
 		#regulator attributes
+		self.availability=False;
 		self._datetime=None;
 		self.type=None;
 		self.release=None;
@@ -145,6 +148,14 @@ class Diematic3Panel:
 		self._zoneBDayTargetTemp=None;
 		self._zoneBNightTargetTemp=None;
 		self._zoneBAntiiceTargetTemp=None;
+		
+	def initRegulator(self):
+		#RS485 converter connexion init
+		self.initConnection();
+		#Attributes init
+		self.initAttributes();
+		
+
 
 
 #this setter/getter are used to read or change values of the regulator
@@ -376,6 +387,7 @@ class Diematic3Panel:
 		FAN_SPEED_MAX=5900;
 		
 		#boiler
+		self.availability=True;
 		self._datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0,pytz.timezone(self.boilerTimezone));
 		self.type=self.registers[DDREGISTER.BOILER_TYPE];
 		self.release=self.registers[DDREGISTER.CTRL];
@@ -588,7 +600,8 @@ class Diematic3Panel:
 		try:
 			self.masterSlaveSynchro=False 
 			self.run=True;
-			self.lastSynchroTimestamp=0;
+			#reset timeout
+			self.lastSynchroTimestamp=time.time();
 			while self.run:
 				#wait for a frame received
 				frame=self.modBusInterface.slaveRx();
@@ -649,17 +662,26 @@ class Diematic3Panel:
 								self.masterSlaveSynchro=False;
 								
 				if ((time.time()-self.lastSynchroTimestamp) > VALIDITY_TIME):
-					self.lastSynchroTimestamp=time.time();
-					self.logger.warning('Synchro timeout => (Re)Init Link with Regulator');
-					self.initRegulator();
+					#log
+					self.logger.warning('Synchro timeout');
+					#init regulator register
+					self.initAttributes();
+					#publish values
 					self.updateCallback();
+					#reinit connection
+					self.initConnection();
 					self.refreshRequest=True;
+					#reset timeout
+					self.lastSynchroTimestamp=time.time();
+					
+
 			self.logger.critical('Modbus Thread stopped');
 		except BaseException as exc:		
 			self.logger.exception(exc)
 
 #property used to launch Modbus loop			
 	def loop_start(self):
+			#launch loop
 			self.loopThread = threading.Thread(target=self.loop)
 			self.loopThread.start();
 			
@@ -668,5 +690,5 @@ class Diematic3Panel:
 		self.run=False;
 		self.loopThread.join();
 		#reinit Regulator
-		self.initRegulator();
+		self.initAttributes();
 		self.updateCallback();

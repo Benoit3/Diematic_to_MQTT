@@ -44,6 +44,7 @@ def diematic3Publish(self):
 		return (f"{parameter:d}" if parameter is not None else '');
 		
 	#boiler
+	buffer.update('status','Online' if self.availability else 'Offline');
 	buffer.update('date',self.datetime.isoformat() if self.datetime is not None else '');
 	buffer.update('type',intValue(self.type));
 	buffer.update('release',intValue(self.release));
@@ -94,8 +95,8 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe(mqttTopicRoot+'/date/set',2);
 	
 	#online publish
-	client.publish(mqttTopicRoot,'Online',1,True);
-	logger.info('Publish :'+mqttTopicRoot+' '+'Online');
+	client.publish(mqttTopicRoot+'/status','Offline',1,True);
+	logger.info('Publish :'+mqttTopicRoot+' '+'Offline');
 	
 def on_disconnect(client, userdata, rc):
 	logger.critical('Diconnected from MQTT broker');
@@ -218,7 +219,7 @@ if __name__ == '__main__':
 		client.on_connect = on_connect
 		client.on_disconnect = on_disconnect
 		#last will
-		client.will_set(mqttTopicRoot,"Offline",1,True)
+		client.will_set(mqttTopicRoot+'/status',"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
 		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)
 		client.message_callback_add(mqttTopicRoot+'/date/set',paramSet)		

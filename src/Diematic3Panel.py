@@ -396,12 +396,12 @@ class Diematic3Panel:
 		self.targetTemp=self.float10(self.registers[DDREGISTER.TCALC_A]);
 		self.returnTemp=self.float10(self.registers[DDREGISTER.RETURN_TEMP]);
 		self.waterPressure=self.float10(self.registers[DDREGISTER.PRESSION_EAU]);
-		self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100);
 		self.smokeTemp=self.float10(self.registers[DDREGISTER.SMOKE_TEMP]);
 		self.ionizationCurrent=self.float10(self.registers[DDREGISTER.IONIZATION_CURRENT]);
 		self.fanSpeed=self.registers[DDREGISTER.FAN_SPEED];
 		self.burnerStatus=(self.registers[DDREGISTER.BASE_ECS] & 0x08) >>3;
-		self.pumpPower=self.registers[DDREGISTER.PUMP_POWER];
+		#burner power calculation with fanspeed and ionization current
+		self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100) if (self.ionizationCurrent>0) else 0;
 		self.alarm['id']=self.registers[DDREGISTER.ALARME];
 		alarmId=self.alarm['id'];
 		if (alarmId==0):
@@ -455,6 +455,7 @@ class Diematic3Panel:
 			elif (modeA==1):
 				self._zoneAMode='ANTIGEL';			
 			self.zoneAPump=(self.registers[DDREGISTER.BASE_ECS] & 0x10) >>4;
+			self.pumpPower=self.registers[DDREGISTER.PUMP_POWER] if (self.zoneAPump==1) else 0;
 			self._zoneADayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_A]);
 			self._zoneANightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_A]);
 			self._zoneAAntiiceTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_A]);

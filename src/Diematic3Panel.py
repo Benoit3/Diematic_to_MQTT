@@ -7,12 +7,6 @@ import DDModbus
 import time,datetime,pytz
 from enum import IntEnum
 
-#parameter validity duration in seconds
-VALIDITY_TIME=120
-
-#parameter refresh period
-REFRESH_PERIOD=52
-
 #Target Temp min/max for hotwater
 TEMP_MIN_ECS=10
 TEMP_MAX_ECS=80
@@ -73,6 +67,8 @@ class Diematic3Panel:
 	updateCallback=None;
 
 	def __init__(self,ip,port,regulatorAddress,boilerTimezone):
+		#parameter refresh period
+		REFRESH_PERIOD=60
 		
 		#logger
 		self.logger = logging.getLogger(__name__);
@@ -103,6 +99,9 @@ class Diematic3Panel:
 		
 		#init values of functionnal attributes
 		self.initRegulator();
+		
+		#period
+		self.refreshPeriod=REFRESH_PERIOD;
 		
 		#init refreshRequest flag
 		self.refreshRequest=False;
@@ -598,6 +597,8 @@ class Diematic3Panel:
 
 #modbus loop, shall run in a specific thread. Allow to exchange register values with the Dielatic regulator
 	def loop(self):
+		#parameter validity duration in seconds after expiration of period
+		VALIDITY_TIME=30
 		try:
 			self.masterSlaveSynchro=False 
 			self.run=True;
@@ -648,7 +649,7 @@ class Diematic3Panel:
 							
 						
 						#update registers, todo condition for refresh launch
-						if (((time.time()-self.lastSynchroTimestamp) > REFRESH_PERIOD) or self.refreshRequest):
+						if (((time.time()-self.lastSynchroTimestamp) > (self.refreshPeriod-5)) or self.refreshRequest):
 							if (self.refreshRegisters()):
 								self.lastSynchroTimestamp=time.time();
 							
@@ -662,7 +663,7 @@ class Diematic3Panel:
 								self.logger.warning('ModBus Master Slave Synchro Error');
 								self.masterSlaveSynchro=False;
 								
-				if ((time.time()-self.lastSynchroTimestamp) > VALIDITY_TIME):
+				if ((time.time()-self.lastSynchroTimestamp) > self.refreshPeriod + VALIDITY_TIME):
 					#log
 					self.logger.warning('Synchro timeout');
 					#init regulator register

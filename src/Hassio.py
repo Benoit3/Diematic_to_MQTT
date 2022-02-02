@@ -99,6 +99,9 @@ class Hassio:
 		payload["payload_not_available"]=self.payload_not_available;
 		payload["qos"]=2;
 		payload["options"]=options;
+		
+		#send discovery message
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);	
 
 	def addSwitch(self,object_id,name,shortStateTopic,shortCommandTopic,payload_off,payload_on):
 		#build discovery topic

@@ -6,7 +6,7 @@ import logging,json
 #This class allow to interface with Home Assistant through the MQTT Discovery Protocol
 class Hassio:
 
-	def __init__(self,mqttClient,topicRoot,clientId,discovery_prefix='homeassistant',):
+	def __init__(self,mqttClient,topicRoot,clientId,discovery_prefix):
 		
 		#logger
 		self.logger = logging.getLogger(__name__);

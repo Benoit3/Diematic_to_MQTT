@@ -142,7 +142,8 @@ def on_connect(client, userdata, flags, rc):
 	#subscribe to control messages with Q0s of 2
 	client.subscribe(mqttTopicRoot+'/+/+/set',2);
 	client.subscribe(mqttTopicRoot+'/date/set',2);
-	client.subscribe('homeassistant/status',2);
+	if hassioDiscoveryEnable:
+		client.subscribe(hassioDiscoveryPrefix+'/status',2);
 	
 	#online publish
 	client.publish(mqttTopicRoot+'/status','Offline',1,True);
@@ -256,9 +257,16 @@ if __name__ == '__main__':
 		#MQTT settings
 		mqttBrokerHost=config.get('MQTT','brokerHost');
 		mqttBrokerPort=config.get('MQTT','brokerPort');
-		mqttTopicRoot=config.get('MQTT','topicRoot');
+		mqttTopicRoot=config.get('MQTT','topicPrefix');
 		logger.critical('Broker: '+mqttBrokerHost+' : '+mqttBrokerPort);
-		logger.critical('Topic Root: '+mqttTopicRoot);		
+		logger.critical('Topic Root: '+mqttTopicRoot);	
+		
+		#Home Assistant discovery settings
+		hassioDiscoveryEnable=config.getboolean('Home Assistant','MQTT_DiscoveryEnable');
+		hassioDiscoveryPrefix=config.get('Home Assistant','discovery_prefix');	
+		
+		logger.critical('Hassio Discovery Enable: '+ str(hassioDiscoveryEnable));
+		logger.critical('Hassio Discovery Prefix: '+ hassioDiscoveryPrefix);
 		
 
 		#init panel
@@ -278,10 +286,12 @@ if __name__ == '__main__':
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
 		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)
 		client.message_callback_add(mqttTopicRoot+'/date/set',paramSet)
-		client.message_callback_add('homeassistant/status',haSendDiscoveryMessages)
+		if hassioDiscoveryEnable:
+			client.message_callback_add(hassioDiscoveryPrefix+'/status',haSendDiscoveryMessages)
 		
 		#create HomeAssistant discovery instance
-		hassio=Hassio.Hassio(client,mqttTopicRoot,'mc25lp');
+
+		hassio=Hassio.Hassio(client,mqttTopicRoot,'mc25lp',hassioDiscoveryPrefix);
 		hassio.availabilityInfo('status','Online','Offline');
 		
 		client.loop_start()

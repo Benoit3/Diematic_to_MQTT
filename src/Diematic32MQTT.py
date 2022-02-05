@@ -28,11 +28,11 @@ class MessageBuffer:
 			if self.buffer[topic]['update']:
 				#send message without trailing / on topic
 				if (topic!=''):
-					self.mqtt.publish(mqttTopicRoot+'/'+topic,self.buffer[topic]['value'],1,True);
-					self.logger.info('Publish :'+mqttTopicRoot+'/'+topic+' '+self.buffer[topic]['value'])
+					self.mqtt.publish(mqttTopicPrefix+'/'+topic,self.buffer[topic]['value'],1,True);
+					self.logger.info('Publish :'+mqttTopicPrefix+'/'+topic+' '+self.buffer[topic]['value'])
 				else:
-					self.mqtt.publish(mqttTopicRoot,self.buffer[topic]['value'],1,True);
-					self.logger.info('Publish :'+mqttTopicRoot+' '+self.buffer[topic]['value'])
+					self.mqtt.publish(mqttTopicPrefix,self.buffer[topic]['value'],1,True);
+					self.logger.info('Publish :'+mqttTopicPrefix+' '+self.buffer[topic]['value'])
 				#set the flag to False
 				self.buffer[topic]['update']=False;
 	
@@ -47,7 +47,7 @@ def diematic3Publish(self):
 	buffer.update('status','Online' if self.availability else 'Offline');
 	buffer.update('date',self.datetime.isoformat() if self.datetime is not None else '');
 	buffer.update('type',intValue(self.type));
-	buffer.update('release',intValue(self.release));
+	buffer.update('ctrl',intValue(self.release));
 	buffer.update('ext/temp',floatValue(self.extTemp));
 	buffer.update('temp',floatValue(self.temp));
 	buffer.update('targetTemp',floatValue(self.targetTemp));
@@ -94,6 +94,8 @@ def haSendDiscoveryMessages(client, userdata, message):
 		#boiler
 		hassio.addSensor('heater_datetime',"Horloge Chaudière",None,'date',"{{ as_timestamp(value) |timestamp_custom ('%d/%m/%Y %H:%M') }}",None);
 		hassio.addSwitch('heater_datetime_set',"Synchro Horloge",'unknown','date/set','--','Now');
+		hassio.addSensor('type',"Type",None,'type',None,None);
+		hassio.addSensor('ctrl',"Controleur",None,'ctrl',None,None);
 		hassio.addSensor('ext_temp',"Température Extérieure",'temperature','ext/temp',None,"°C");
 		hassio.addSensor('boiler_temp',"Température Chaudière",'temperature','temp',None,"°C");	
 		hassio.addSensor('target_temp',"Température Cible",'temperature','targetTemp',None,"°C");
@@ -106,6 +108,7 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addBinarySensor('burner_status',"Etat Bruleur",None,'burnerStatus',"1","0");	
 		hassio.addSensor('pump_power',"Puissance Pompe",'power_factor','pumpPower',None,"%");
 		hassio.addSensor('alarm',"Etat",None,'alarm',"{{ value_json.txt}}",None);
+		hassio.addSensor('alarm_id',"N° Erreur",None,'alarm',"{{ value_json.id}}",None);
 		
 		#hot water
 		hassio.addBinarySensor('hot_water_pump',"Pompe ECS",None,'hotWater/pump',"1","0");	
@@ -140,14 +143,14 @@ def on_connect(client, userdata, flags, rc):
 	logger.critical('Connected to MQTT broker');
 	print('Connected to MQTT broker');
 	#subscribe to control messages with Q0s of 2
-	client.subscribe(mqttTopicRoot+'/+/+/set',2);
-	client.subscribe(mqttTopicRoot+'/date/set',2);
+	client.subscribe(mqttTopicPrefix+'/+/+/set',2);
+	client.subscribe(mqttTopicPrefix+'/date/set',2);
 	if hassioDiscoveryEnable:
 		client.subscribe(hassioDiscoveryPrefix+'/status',2);
 	
 	#online publish
-	client.publish(mqttTopicRoot+'/status','Offline',1,True);
-	logger.info('Publish :'+mqttTopicRoot+' '+'Offline');
+	client.publish(mqttTopicPrefix+'/status','Offline',1,True);
+	logger.info('Publish :'+mqttTopicPrefix+' '+'Offline');
 	
 	
 def on_disconnect(client, userdata, rc):
@@ -160,7 +163,7 @@ def modeSet(client, userdata, message):
 		'/zoneB/mode/set':'zoneBMode'};
 		
 	#remove root of the topic
-	shortTopic=message.topic[len(mqttTopicRoot):]
+	shortTopic=message.topic[len(mqttTopicPrefix):]
 	
 	#if topic exist
 	if shortTopic in table:
@@ -182,7 +185,7 @@ def tempSet(client, userdata, message):
 		'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp'};
 		
 	#remove root of the topic
-	shortTopic=message.topic[len(mqttTopicRoot):]
+	shortTopic=message.topic[len(mqttTopicPrefix):]
 	
 	try:
 		value=float(message.payload);
@@ -203,7 +206,7 @@ def dateSet(client, userdata, message):
 	table={'/date/set':'datetime'};
 		
 	#remove root of the topic
-	shortTopic=message.topic[len(mqttTopicRoot):]
+	shortTopic=message.topic[len(mqttTopicPrefix):]
 	
 	#if topic exist
 	if shortTopic in table:
@@ -257,9 +260,12 @@ if __name__ == '__main__':
 		#MQTT settings
 		mqttBrokerHost=config.get('MQTT','brokerHost');
 		mqttBrokerPort=config.get('MQTT','brokerPort');
-		mqttTopicRoot=config.get('MQTT','topicPrefix');
+		
+		mqttClientId=config.get('MQTT','clientId');
+		mqttTopicPrefix=config.get('MQTT','topicPrefix')+'/'+mqttClientId;
+		
 		logger.critical('Broker: '+mqttBrokerHost+' : '+mqttBrokerPort);
-		logger.critical('Topic Root: '+mqttTopicRoot);	
+		logger.critical('Topic Root: '+mqttTopicPrefix);	
 		
 		#Home Assistant discovery settings
 		hassioDiscoveryEnable=config.getboolean('Home Assistant','MQTT_DiscoveryEnable');
@@ -282,16 +288,16 @@ if __name__ == '__main__':
 		client.on_connect = on_connect
 		client.on_disconnect = on_disconnect
 		#last will
-		client.will_set(mqttTopicRoot+'/status',"Offline",1,True)
+		client.will_set(mqttTopicPrefix+'/status',"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))
-		client.message_callback_add(mqttTopicRoot+'/+/+/set',paramSet)
-		client.message_callback_add(mqttTopicRoot+'/date/set',paramSet)
+		client.message_callback_add(mqttTopicPrefix+'/+/+/set',paramSet)
+		client.message_callback_add(mqttTopicPrefix+'/date/set',paramSet)
 		if hassioDiscoveryEnable:
 			client.message_callback_add(hassioDiscoveryPrefix+'/status',haSendDiscoveryMessages)
 		
 		#create HomeAssistant discovery instance
 
-		hassio=Hassio.Hassio(client,mqttTopicRoot,'mc25lp',hassioDiscoveryPrefix);
+		hassio=Hassio.Hassio(client,mqttTopicPrefix,mqttClientId,hassioDiscoveryPrefix);
 		hassio.availabilityInfo('status','Online','Offline');
 		
 		client.loop_start()

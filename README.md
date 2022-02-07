@@ -141,20 +141,20 @@ exemple:
 
     mosquitto_pub -h localhost -t home/heater/boiler/date/set -m 'Now'
 
+<h3>Home Assistant Integration</h3>
+
+The Home Assistant discovery mode is enable by default. Check parameters in the Diematic32MQTT.conf file.
+
+You will just have to define your cards.
+
+![Hassio_Control](ReadMeImages/HassioControlCard.png) ![Hassio_Control](ReadMeImages/HassioMonitoringCard.png)
+![Hassio_Control](ReadMeImages/HassioSettingCard.png)
+
 <h3>To use client Dash MQTT for android</h3>
 
 With this [client](https://play.google.com/store/apps/details?id=net.routix.mqttdash&hl=fr&gl=US) you can get easily custom dashboard like this one:
 
 ![Dash MQTT](ReadMeImages/MQTTDash.png)
-
-To import exemple of Tiles :
-- after installation, add a new connexion to your MQTT broker, and select it
-- clic on the double arrow icon on the top banner
-- clic on "Suscribe and wait for metrics" button
-
-Get the MQTT_Dash/Tiles.txt file and then use following command:
-
-    mosquitto_pub -h localhost -t metrics/exchange -f Tiles.txt
 
 <h3>To run as a service under Raspbian</h3>
 

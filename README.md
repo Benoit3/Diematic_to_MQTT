@@ -145,7 +145,7 @@ exemple:
 
 The Home Assistant discovery mode is enable by default. Check parameters in the Diematic32MQTT.conf file.
 
-You will just have to define your cards.
+You will just have to connect your hassio to your MQTT broker and define your cards.
 
 ![Hassio_Control](ReadMeImages/HassioControlCard.png) ![Hassio_Control](ReadMeImages/HassioMonitoringCard.png)
 ![Hassio_Control](ReadMeImages/HassioSettingCard.png)

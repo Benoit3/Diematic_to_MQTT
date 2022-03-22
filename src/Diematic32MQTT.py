@@ -17,11 +17,17 @@ class MessageBuffer:
 		self.buffer=dict();
 		self.mqtt=mqtt;
 	
+	#clear buffer
+	def clear(self):
+		self.buffer=dict();
+		
+	#update or create a message in the buffer
 	def update(self,topic,value):
 		#if the topic is not in buffer
 		if ((topic not in self.buffer) or (self.buffer[topic]['value']!=value)):
 			self.buffer[topic]={'value':value,'update':True};
-		
+			
+	#publish buffer content to MQTT broker	
 	def send(self):
 		#for each topic
 		for topic in self.buffer:
@@ -147,10 +153,11 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe(mqttTopicPrefix+'/date/set',2);
 	if hassioDiscoveryEnable:
 		client.subscribe(hassioDiscoveryPrefix+'/status',2);
-	
-	#online publish
-	client.publish(mqttTopicPrefix+'/status','Offline',1,True);
-	logger.info('Publish :'+mqttTopicPrefix+' '+'Offline');
+	#clear buffer and inform client that status is still Offline
+	buffer.clear();
+	buffer.update('status','Offline');
+	buffer.send();
+
 	
 	
 def on_disconnect(client, userdata, rc):
@@ -299,11 +306,12 @@ if __name__ == '__main__':
 
 		hassio=Hassio.Hassio(client,mqttTopicPrefix,mqttClientId,hassioDiscoveryPrefix);
 		hassio.availabilityInfo('status','Online','Offline');
-		
-		client.loop_start()
+	
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);
-			
+		
+		#launch MQTT client
+		client.loop_start();
 
 		#start modbus thread
 		panel.loop_start();

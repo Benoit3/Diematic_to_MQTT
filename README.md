@@ -63,11 +63,11 @@ Remark : I let you read the doc to configure IP parameters of the USR-TCP-232-30
 
 Install pytz package:
 
-sudo pip3 install pytz
+    sudo pip3 install pytz
 
 Install paho MQTT client:
 
-sudo pip3 install paho-mqtt
+    sudo pip3 install paho-mqtt
 
 Script are available [here](src/)
 
@@ -84,19 +84,19 @@ To run the script you just have to launch python3 Diematic32MQTT.py
 
 You can follow log in real time with:
 
-tail -f log.out
+    tail -f log.out
 
 <h3>To display MQTT message send</h3>
 Use mosquitto_sub command:
 
-mosquitto_sub -h localhost -v -t 'home/#'
+    mosquitto_sub -h localhost -v -t 'home/#'
 
 Remark: as modbus switch between slave and master mode, you may have to wait up to 10s to have your command taken into account
 
 <h3>To send MQTT message to the boiler</h3>
 Use mosquitto_pub command. Exemple, to set the regulator in temporary day mode:
 
-mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
+    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
 
 List of MQTT message topics to set temperatures is :
 - home/heater/boiler/hotWater/dayTemp/set

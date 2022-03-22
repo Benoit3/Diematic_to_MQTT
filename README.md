@@ -61,7 +61,13 @@ Remark : I let you read the doc to configure IP parameters of the USR-TCP-232-30
 
 <h3>Python script deployment</h3>
 
-Python pytz module is needed.
+Install pytz package:
+
+sudo pip3 install pytz
+
+Install paho MQTT client:
+
+sudo pip3 install paho-mqtt
 
 Script are available [here](src/)
 

@@ -145,7 +145,7 @@ exemple:
 
 The Home Assistant discovery mode is enable by default. Check parameters in the Diematic32MQTT.conf file.
 
-You will just have to define your cards.
+You will just have to connect your hassio to your MQTT broker and define your cards.
 
 ![Hassio_Control](ReadMeImages/HassioControlCard.png) ![Hassio_Control](ReadMeImages/HassioMonitoringCard.png)
 ![Hassio_Control](ReadMeImages/HassioSettingCard.png)
@@ -178,4 +178,4 @@ Main found limitations of the Diematic 3 interfaces are :
 - no possibility to use without issue temporary freezing mode
 - pump power stays at 100% when all pumps are off
 
-For further info you can go to [Fibaro forum](https://www.domotique-fibaro.fr/topic/5677-de-dietrich-diematic-isystem/)
+For further info you can go to [Fibaro forum](https://www.domotique-fibaro.fr/topic/5677-de-dietrich-diematic-isystem/) or to the [Home Assistant Community](https://community.home-assistant.io/t/de-dietrich-diematic-modbus-to-mqtt-interface/363086)

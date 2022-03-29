@@ -65,7 +65,7 @@ def diematic3Publish(self):
 	buffer.update('fanSpeed',intValue(self.fanSpeed));
 	buffer.update('burnerStatus',intValue(self.burnerStatus));
 	buffer.update('pumpPower',intValue(self.pumpPower));
-	buffer.update('alarm',json.dumps(self.alarm));
+	buffer.update('alarm',json.dumps(self.alarm) if self.alarm is not None else '');
 	
 	#hotwater
 	buffer.update('hotWater/pump',intValue(self.hotWaterPump));

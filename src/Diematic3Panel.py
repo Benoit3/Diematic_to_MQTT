@@ -129,7 +129,7 @@ class Diematic3Panel:
 		self.ionizationCurrent=None
 		self.burnerStatus=None;
 		self.pumpPower=None;
-		self.alarm={'id':None,'txt':None};
+		self.alarm=None;
 		self.hotWaterPump=None;
 		self.hotWaterTemp=None;
 		self._hotWaterMode=None;
@@ -401,23 +401,23 @@ class Diematic3Panel:
 		self.burnerStatus=(self.registers[DDREGISTER.BASE_ECS] & 0x08) >>3;
 		#burner power calculation with fanspeed and ionization current
 		self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100) if (self.ionizationCurrent>0) else 0;
+		self.alarm={'id':None,'txt':None}
 		self.alarm['id']=self.registers[DDREGISTER.ALARME];
-		alarmId=self.alarm['id'];
-		if (alarmId==0):
+		if (self.alarm['id']==0):
 			self.alarm['txt']='OK';
-		elif (alarmId==10):
+		elif (self.alarm['id']==10):
 			self.alarm['txt']='Défaut Sonde Retour';
-		elif (alarmId==21):
+		elif (self.alarm['id']==21):
 			self.alarm['txt']='Pression d\'eau basse';
-		elif (alarmId==26):
+		elif (self.alarm['id']==26):
 			self.alarm['txt']='Défaut Allumage';
-		elif (alarmId==27):
+		elif (self.alarm['id']==27):
 			self.alarm['txt']='Flamme Parasite';
-		elif (alarmId==28):
+		elif (self.alarm['id']==28):
 			self.alarm['txt']='STB Chaudière';
-		elif (alarmId==30):
+		elif (self.alarm['id']==30):
 			self.alarm['txt']='Rearm. Coffret';	
-		elif (alarmId==31):
+		elif (self.alarm['id']==31):
 			self.alarm['txt']='Défaut Sonde Fumée';
 		else:
 			self.alarm['txt']='Défaut inconnu';

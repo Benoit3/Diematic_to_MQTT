@@ -1,6 +1,7 @@
 [Unit]
 Description=Diematic32MQTT
-After=multi-user.target
+Wants=network-online.target signal.service
+After=network-online.target signal.service
 [Service]
 Type=simple
 ExecStart=/usr/bin/python3  /home/pi/Diematic32MQTT/Diematic32MQTT.py

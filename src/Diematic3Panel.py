@@ -66,8 +66,8 @@ class DDREGISTER(IntEnum):
 class Diematic3Panel:
 	updateCallback=None;
 
-	def __init__(self,ip,port,regulatorAddress,boilerTimezone):
-		#parameter refresh period
+	def __init__(self,ip,port,regulatorAddress,boilerTimezone='',syncTime=False):
+		#default refresh period
 		REFRESH_PERIOD=60
 		
 		#logger
@@ -81,7 +81,17 @@ class Diematic3Panel:
 		self.regulatorAddress=regulatorAddress;
 		
 		#timezone
-		self.boilerTimezone=boilerTimezone;
+		self.syncTime=syncTime;
+		self.tzinfo=None;
+		try:
+			self.tzinfo = pytz.timezone(boilerTimezone)
+			self.logger.info(f"Using tzinfo ('{self.tzinfo}') for Boiler time sync")
+		except pytz.exceptions.UnknownTimeZoneError:
+			self.logger.warning(f"Boiler Timezone Unknown ('{boilerTimezone}'), using local timezone for Boiler time sync")
+			
+		#overDriftCounter
+		#this variable to count successive excess of boiler clock
+		self.overDriftCounter=0;
 		
 		#state machine initialisation
 		self.busStatus=DDModBusStatus.INIT;
@@ -116,6 +126,7 @@ class Diematic3Panel:
 		#regulator attributes
 		self.availability=False;
 		self._datetime=None;
+		self.lastTimeSync=None;
 		self.type=None;
 		self.release=None;
 		self.extTemp=None;
@@ -304,8 +315,8 @@ class Diematic3Panel:
 	@datetime.setter
 	def datetime(self,x):
 		#switch time to boiler timezone
-		x=x.astimezone(pytz.timezone(self.boilerTimezone));
-		
+		x=x.astimezone(self.tzinfo);
+		self.lastTimeSync=x;
 		#request hour/minute/weekday registers change
 		self.logger.debug('datetime requested:'+x.isoformat());
 		reg=DDModbus.RegisterSet(DDREGISTER.HEURE.value,[x.hour,x.minute,x.isoweekday()]);
@@ -387,7 +398,12 @@ class Diematic3Panel:
 		
 		#boiler
 		self.availability=True;
-		self._datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0,pytz.timezone(self.boilerTimezone));
+		self._datetime=datetime.datetime(self.registers[DDREGISTER.ANNEE]+2000,self.registers[DDREGISTER.MOIS],self.registers[DDREGISTER.JOUR],self.registers[DDREGISTER.HEURE],self.registers[DDREGISTER.MINUTE],0,0);
+		if self.tzinfo is not None:
+			self._datetime=self.tzinfo.localize(self._datetime);
+		else:
+			self._datetime=self._datetime.astimezone();
+
 		self.type=self.registers[DDREGISTER.BOILER_TYPE];
 		self.release=self.registers[DDREGISTER.CTRL];
 		self.extTemp=self.float10(self.registers[DDREGISTER.TEMP_EXT]);
@@ -598,6 +614,7 @@ class Diematic3Panel:
 #modbus loop, shall run in a specific thread. Allow to exchange register values with the Dielatic regulator
 	def loop(self):
 		#parameter validity duration in seconds after expiration of period
+		#after this timeout, interface is reset
 		VALIDITY_TIME=30
 		try:
 			self.masterSlaveSynchro=False 
@@ -643,6 +660,7 @@ class Diematic3Panel:
 							#write to Analog registers
 							if ( not self.modBusInterface.masterWriteAnalog(self.regulatorAddress,regSet.address,regSet.data)):
 								#And cancel Master Slave Synchro Flag in case of error
+
 								self.logger.warning('ModBus Master Slave Synchro Error');
 								self.masterSlaveSynchro=False;
 							self.refreshRequest=True;
@@ -658,6 +676,27 @@ class Diematic3Panel:
 								
 								#clear Flag
 								self.refreshRequest=False;
+								
+								#check time drift
+								now = datetime.datetime.now().astimezone();
+								self.logger.debug('Now :' + str(now));
+								self.logger.debug('Boiler :' + str(self.datetime));
+								drift = (now - self.datetime).total_seconds();
+								self.logger.debug('Drift :' + str(drift));
+								
+								#if drift is more than 60 s
+								if (self.syncTime and abs(drift) >=60):
+									self.overDriftCounter+=1;
+									self.logger.debug('Drift Counter:' + str(self.overDriftCounter));
+									# more than 6 successive times
+									if (self.overDriftCounter >=6):
+										#boiler time is set
+										self.overDriftCounter=0;
+										self.logger.critical('Sync Time: Set boiler time to :' + str(now));
+										self.datetime=now;
+								else:
+									self.overDriftCounter=0;
+									
 							else:
 								#Cancel Master Slave Synchro Flag in case of error
 								self.logger.warning('ModBus Master Slave Synchro Error');

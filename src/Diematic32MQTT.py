@@ -52,6 +52,7 @@ def diematic3Publish(self):
 	#boiler
 	buffer.update('status','Online' if self.availability else 'Offline');
 	buffer.update('date',self.datetime.isoformat() if self.datetime is not None else '');
+	buffer.update('lastTimeSync',self.lastTimeSync.isoformat() if self.lastTimeSync is not None else '');
 	buffer.update('type',intValue(self.type));
 	buffer.update('ctrl',intValue(self.release));
 	buffer.update('ext/temp',floatValue(self.extTemp));
@@ -261,8 +262,9 @@ if __name__ == '__main__':
 		logger.critical('Modbus interface address: '+modbusAddress+' : '+modbusPort);
 		logger.critical('Modbus regulator address: '+ hex(modbusRegulatorAddress));
 		
-		#boiler time timezone
+		#boiler time timezone and automatic time synchro
 		boilerTimezone=config.get('Boiler','timezone');
+		boilerTimeSync=config.get('Boiler','timeSync');
 		
 		#MQTT settings
 		mqttBrokerHost=config.get('MQTT','brokerHost');
@@ -285,7 +287,7 @@ if __name__ == '__main__':
 		#init panel
 		period=int(config.get('Boiler','period'),0);
 		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
-		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,boilerTimezone);
+		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,boilerTimezone,boilerTimeSync);
 		#set refresh period, with a minimum of 10s
 		panel.refreshPeriod=max(period,10);
 		

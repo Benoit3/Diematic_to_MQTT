@@ -624,7 +624,7 @@ class Diematic3Panel:
 			self.lastSynchroTimestamp=time.time();
 			while self.run:
 				#wait for a frame received
-				frame=self.modBusInterface.slaveRx();
+				frame=self.modBusInterface.slaveRx(self.interfaceAddress);
 
 				#depending current bus mode	
 				if (self.busStatus!=DDModBusStatus.SLAVE):

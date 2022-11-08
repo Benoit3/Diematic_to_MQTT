@@ -66,7 +66,7 @@ class DDREGISTER(IntEnum):
 class Diematic3Panel:
 	updateCallback=None;
 
-	def __init__(self,ip,port,regulatorAddress,boilerTimezone='',syncTime=False):
+	def __init__(self,ip,port,regulatorAddress,interfaceAddress,boilerTimezone='',syncTime=False):
 		#default refresh period
 		REFRESH_PERIOD=60
 		
@@ -79,6 +79,7 @@ class Diematic3Panel:
 		
 		#regulator modbus address
 		self.regulatorAddress=regulatorAddress;
+		self.interfaceAddress=interfaceAddress;
 		
 		#timezone
 		self.syncTime=syncTime;

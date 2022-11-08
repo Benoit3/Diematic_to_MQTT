@@ -259,6 +259,7 @@ if __name__ == '__main__':
 		modbusAddress=config.get('Modbus','ip');
 		modbusPort=config.get('Modbus','port');
 		modbusRegulatorAddress=int(config.get('Modbus','regulatorAddress'),0);
+		modbusInterfaceAddress=int(config.get('Modbus','interfaceAddress'),0);
 		logger.critical('Modbus interface address: '+modbusAddress+' : '+modbusPort);
 		logger.critical('Modbus regulator address: '+ hex(modbusRegulatorAddress));
 		
@@ -287,7 +288,7 @@ if __name__ == '__main__':
 		#init panel
 		period=int(config.get('Boiler','period'),0);
 		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
-		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,boilerTimezone,boilerTimeSync);
+		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		#set refresh period, with a minimum of 10s
 		panel.refreshPeriod=max(period,10);
 		

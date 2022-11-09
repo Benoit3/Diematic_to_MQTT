@@ -502,15 +502,15 @@ class Diematic3Panel:
 				
 			self.zoneBPump=(self.registers[DDREGISTER.OPTIONS_B_C] & 0x10) >>4;
 			self._zoneBDayTargetTemp=self.float10(self.registers[DDREGISTER.CONS_JOUR_B]);
-			self._zoneBNightTempTarget=self.float10(self.registers[DDREGISTER.CONS_NUIT_B]);
-			self._zoneBAntiiceTempTarget=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_B]);
+			self._zoneBNightTargetTemp=self.float10(self.registers[DDREGISTER.CONS_NUIT_B]);
+			self._zoneBAntiiceTargetTemp=self.float10(self.registers[DDREGISTER.CONS_ANTIGEL_B]);
 
 		else:
 			self._zoneBMode=None;
 			self.zoneBPump=None;
 			self._zoneBDayTargetTemp=None;
-			self._zoneBNightTempTarget=None;
-			self._zoneBAntiiceTempTarget=None;
+			self._zoneBNightTargetTemp=None;
+			self._zoneBAntiiceTargetTemp=None;
 
 		self.updateCallback();
 

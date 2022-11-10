@@ -259,7 +259,7 @@ if __name__ == '__main__':
 		modbusAddress=config.get('Modbus','ip');
 		modbusPort=config.get('Modbus','port');
 		modbusRegulatorAddress=int(config.get('Modbus','regulatorAddress'),0);
-		modbusInterfaceAddress=int(config.get('Modbus','interfaceAddress'),0);
+		modbusInterfaceAddress=int(config.get('Modbus','interfaceAddress',fallback='0'),0);
 		logger.critical('Modbus interface address: '+modbusAddress+' : '+modbusPort);
 		logger.critical('Modbus regulator address: '+ hex(modbusRegulatorAddress));
 		

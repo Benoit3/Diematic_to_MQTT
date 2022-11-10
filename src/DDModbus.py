@@ -39,6 +39,7 @@ class slaveRequest:
 		self.logger = logging.getLogger(__name__)
 		self.valid=False;
 		self.modbusAddress=0;
+		self.modbusFunctionCode=0;
 		self.R_W=False;
 		self.regAddress=0;
 		self.regNb=0;
@@ -48,9 +49,11 @@ class slaveRequest:
 		if ((len(data) > self.FRAME_MAX_LENGTH) or (len(data) < self.FRAME_MIN_LENGTH )):
 			self.logger.warning('Received Frame Length Error');
 			return;
-	
+		#get modbus function code
+		self.modbusFunctionCode=data[1];
+
 		#if modBus feature is READ_ANALOG_HOLDING_REGISTERS
-		if (data[1] == DDModbus.READ_ANALOG_HOLDING_REGISTERS):				
+		if (self.modbusFunctionCode == DDModbus.READ_ANALOG_HOLDING_REGISTERS):
 			#check CRC
 			crc=calc_crc(data[0:6]);
 			if (crc!=0x100*data[7]+data[6]):
@@ -65,8 +68,8 @@ class slaveRequest:
 			self.regNb=0x100*data[4]+data[5];
 
 			
-		#if modBus feature is WRITE_MULTIPLE_REGISTERS			
-		if (data[1] == DDModbus.WRITE_MULTIPLE_REGISTERS):
+		#if modBus feature is WRITE_MULTIPLE_REGISTERS
+		if (self.modbusFunctionCode == DDModbus.WRITE_MULTIPLE_REGISTERS):
 			#get register number
 			regNumber=data[4]*0x100 + data[5];
 
@@ -131,27 +134,32 @@ class DDModbus:
 			except socket.error as exc:
 				run=False;
 
-	def slaveRx(self):
+	def slaveRx(self,modbusSlaveAddress):
 			try:
 				self.socket.settimeout(DDModbus.SLAVE_RX_TIMEOUT);
 				data=self.socket.recv(1024);
 				self.logger.debug('Frame received: '+data.hex());
 				
-				#frame are never used and never acknowledged
+				#frame consistency check
 				frame=slaveRequest(data);
 				
-				#exemple of ack for WRITE_MULTIPLE_REGISTERS request
-				#commented to avoid to the boiler to think there are
-				#boiler in //
-				#if (data[1]==0x10):
-				#	tx=bytearray();
-				#	tx.extend(data[0:6]);
-				#	crc=calc_crc(tx);
-				#	tx.append(crc & 0xFF);
-				#	tx.append((crc >> 8) & 0xFF);
-				#	tx.append(0);
-				#	self.socket.send(tx);
-				
+				#if slave address is correct
+				if ((modbusSlaveAddress!=0) and (frame.modbusAddress==modbusSlaveAddress)):
+					#ack for WRITE_MULTIPLE_REGISTERS request
+					if (frame.modbusFunctionCode==DDModbus.WRITE_MULTIPLE_REGISTERS):
+						self.logger.debug('Ack WRITE_MULTIPLE_REGISTERS frame');
+						tx=bytearray();
+						tx.extend(data[0:6]);
+						crc=calc_crc(tx);
+						tx.append(crc & 0xFF);
+						tx.append((crc >> 8) & 0xFF);
+						tx.append(0);
+						self.socket.send(tx);
+					#ack for READ_ANALOG_HOLDING_REGISTERS
+					elif (frame.modbusFunctionCode==DDModbus.READ_ANALOG_HOLDING_REGISTERS):
+						#it is not possible to ack the request as there is not content to provide
+						self.logger.debug('No Ack for READ_ANALOG_HOLDING_REGISTERS frame');
+
 				return frame;
 			except socket.error as exc:
 				return False;

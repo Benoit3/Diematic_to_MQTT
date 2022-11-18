@@ -297,7 +297,7 @@ if __name__ == '__main__':
 		
 		#force circuit A or B to be enables if requested
 		panel.forceCircuitA=config.getboolean('Boiler','enable_circuit_A',fallback=False);
-		panel.forceCircuitB=config.getboolean('Boiler','enable_circuit_B',fallback='False');
+		panel.forceCircuitB=config.getboolean('Boiler','enable_circuit_B',fallback=False);
 
 		#init mqtt brooker
 		client = mqtt.Client()

@@ -267,6 +267,9 @@ if __name__ == '__main__':
 		boilerTimezone=config.get('Boiler','timezone');
 		boilerTimeSync=config.get('Boiler','timeSync');
 		
+		#refresh period
+		period=int(config.get('Boiler','period'),0);
+		
 		#MQTT settings
 		mqttBrokerHost=config.get('MQTT','brokerHost');
 		mqttBrokerPort=config.get('MQTT','brokerPort');
@@ -286,12 +289,15 @@ if __name__ == '__main__':
 		
 
 		#init panel
-		period=int(config.get('Boiler','period'),0);
 		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
 		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
+		
 		#set refresh period, with a minimum of 10s
 		panel.refreshPeriod=max(period,10);
 		
+		#force circuit A or B to be enables if requested
+		panel.forceCircuitA=config.getboolean('Boiler','enable_circuit_A',fallback=False);
+		panel.forceCircuitB=config.getboolean('Boiler','enable_circuit_B',fallback='False');
 
 		#init mqtt brooker
 		client = mqtt.Client()

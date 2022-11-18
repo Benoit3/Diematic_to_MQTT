@@ -90,6 +90,10 @@ class Diematic3Panel:
 		except pytz.exceptions.UnknownTimeZoneError:
 			self.logger.warning(f"Boiler Timezone Unknown ('{boilerTimezone}'), using local timezone for Boiler time sync")
 			
+		#attribute allowing to force circuit to be enable
+		self.forceCircuitA=False;
+		self.forceCircuitB=False;
+		
 		#overDriftCounter
 		#this variable to count successive excess of boiler clock
 		self.overDriftCounter=0;
@@ -455,7 +459,7 @@ class Diematic3Panel:
 		
 		#Area A
 		self.zoneATemp=self.float10(self.registers[DDREGISTER.TEMP_AMB_A]);
-		if ( self.zoneATemp is not None):
+		if ( (self.zoneATemp is not None ) or self.forceCircuitA):
 			modeA=self.registers[DDREGISTER.MODE_A]& 0x2F;
 			
 			if (modeA==8):
@@ -486,7 +490,7 @@ class Diematic3Panel:
 				
 		#Area B
 		self.zoneBTemp=self.float10(self.registers[DDREGISTER.TEMP_AMB_B]);
-		if ( self.zoneBTemp is not None):
+		if ( (self.zoneBTemp is not None) or self.forceCircuitB):
 			modeB=self.registers[DDREGISTER.MODE_B]& 0x2F;
 			if (modeB==8):
 				self._zoneBMode='AUTO';

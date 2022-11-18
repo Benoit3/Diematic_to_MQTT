@@ -514,8 +514,8 @@ class Diematic3Panel:
 			self._zoneBMode=None;
 			self.zoneBPump=None;
 			self._zoneBDayTargetTemp=None;
-			self._zoneBNightTempTarget=None;
-			self._zoneBAntiiceTempTarget=None;
+			self._zoneBNightTargetTemp=None;
+			self._zoneBAntiiceTargetTemp=None;
 
 		self.updateCallback();
 

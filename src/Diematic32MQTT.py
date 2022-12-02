@@ -4,7 +4,7 @@
 import sys,signal,threading
 import configparser
 import logging, logging.config
-import DDModbus,Diematic3Panel,Hassio
+import DDModbus,Diematic3Panel,DiematicDeltaPanel,Hassio
 import paho.mqtt.client as mqtt
 import json
 import time,datetime
@@ -292,10 +292,14 @@ if __name__ == '__main__':
 		
 
 		#init panel
-		if (regulatorType!='Diematic3'):
-			logger.critical('Regulator: '+regulatorType+' is not supported ');
-		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
-		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
+		if (regulatorType=='DiematicDelta'):
+			logger.critical('Regulator type is Diematic Delta');
+			DiematicDeltaPanel.DiematicDeltaPanel.updateCallback=diematic3Publish;
+			panel=DiematicDeltaPanel.DiematicDeltaPanel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
+		else:
+			logger.critical('Regulator type is Diematic3');
+			Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
+			panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		
 		#set refresh period, with a minimum of 10s
 		panel.refreshPeriod=max(period,10);

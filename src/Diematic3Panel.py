@@ -24,7 +24,66 @@ class Diematic3Panel(Diematic):
 		self.busStatus=DDModBusStatus.INIT;
 		
 		super().__init__(ip,port,regulatorAddress,interfaceAddress,boilerTimezone,syncTime)
-        
+
+#this property is used to get register values from the regulator Diematic3
+	def refreshRegisters(self):
+		#update registers 1->63
+		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,1,63);
+		if (reg is not None):
+			self.registers.update(reg);
+		else:
+			return(False);
+		#update registers 64->127
+		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,64,64);
+		if (reg is not None):
+			self.registers.update(reg);
+		else:
+			return(False);
+			
+		#update registers 128->191
+		#reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,128,64);
+		#if (reg is not None):
+		#	self.registers.update(reg);
+		#else:
+		#	return(False);
+			
+		#update registers 191->255
+		#reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,192,64);
+		#if (reg is not None):
+		#	self.registers.update(reg);
+		#else:
+		#	return(False);
+			
+		#update registers 384->447
+		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,384,64);
+		if (reg is not None):
+			self.registers.update(reg);
+		else:
+			return(False);
+		#update registers 448->470
+		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,448,23);	
+		if (reg is not None):
+			self.registers.update(reg);
+		else:
+			return(False);
+		
+		#display register table on standard output
+		#regLine="";
+		#for index in range(256):
+		#	try:
+		#		regLine+='{:04X}'.format(self.registers[index])+' '
+		#	except KeyError:
+		#		regLine+='---- ';
+				
+		#	if (index % 16)==15:
+		#		regLine= '{:01X}'.format(index >>4)+'0: '+regLine
+		#		print(regLine);
+		#		regLine='';
+
+		#print('==========================================')
+		return(True);
+
+
 #this property is used by the Modbus loop to set register dedicated to Mode A and hotwater mode (in case of no usage of B area)		
 	def modeAUpdate(self):
 		#if mode A register update request is pending

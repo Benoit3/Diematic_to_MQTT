@@ -23,7 +23,7 @@ class Diematic3Panel(Diematic):
 		#state machine initialisation
 		self.busStatus=DDModBusStatus.INIT;
 		
-		super().__init__(ip,port,regulatorAddress,interfaceAddress,boilerTimezone,syncTime)
+		super().__init__(ip,port,regulatorAddress,0,boilerTimezone,syncTime)
 
 #this property is used to get register values from the regulator Diematic3
 	def refreshRegisters(self):

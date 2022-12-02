@@ -3,7 +3,7 @@
 
 import threading,queue
 import logging, logging.config
-import DDModbus
+from DDModbus import DDModbus
 import time,datetime,pytz
 from enum import IntEnum
 from Diematic import Diematic,DDREGISTER
@@ -33,7 +33,9 @@ class DiematicDeltaPanel(Diematic):
 				
 				#if a frame has been received
 				if (frame):
-					self.logger.info('A frame has been received');
+					if ((frame.valid) and (frame.modbusAddress==self.interfaceAddress) and (frame.modbusFunctionCode==DDModbus.WRITE_MULTIPLE_REGISTERS)):
+						self.logger.debug('A valid frame has been received');
+						self.logger.debug('Register data :'+ str(frame.data))
 
 					#reset timeout
 					self.lastSynchroTimestamp=time.time();

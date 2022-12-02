@@ -58,7 +58,7 @@ class DDREGISTER(IntEnum):
 #This class allow to read/write parameters to Diematic regulator with the helo of a RS485/TCPIP converter
 #refresh of attributes From regulator is done roughly every minute
 #update request to the regulator are done within 10 s and trigger a whole read refresh
-class Diematic3:
+class Diematic:
 	updateCallback=None;
 
 	def __init__(self,ip,port,regulatorAddress,interfaceAddress,boilerTimezone='',syncTime=False):

@@ -263,6 +263,9 @@ if __name__ == '__main__':
 		logger.critical('Modbus interface address: '+modbusAddress+' : '+modbusPort);
 		logger.critical('Modbus regulator address: '+ hex(modbusRegulatorAddress));
 		
+		#regulator type
+		regulatorType=config.get('Boiler','regulatorType',fallback='Diematic3');
+		
 		#boiler time timezone and automatic time synchro
 		boilerTimezone=config.get('Boiler','timezone');
 		boilerTimeSync=config.get('Boiler','timeSync');
@@ -289,6 +292,8 @@ if __name__ == '__main__':
 		
 
 		#init panel
+		if (regulatorType!='Diematic3'):
+			logger.critical('Regulator: '+regulatorType+' is not supported ');
 		Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
 		panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		

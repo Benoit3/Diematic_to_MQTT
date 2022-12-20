@@ -276,6 +276,8 @@ if __name__ == '__main__':
 		#MQTT settings
 		mqttBrokerHost=config.get('MQTT','brokerHost');
 		mqttBrokerPort=config.get('MQTT','brokerPort');
+		mqttBrokerLogin=config.get('MQTT','brokerLogin',fallback='');
+		mqttBrokerPassword=config.get('MQTT','brokerPassword',fallback='');
 		
 		mqttClientId=config.get('MQTT','clientId');
 		mqttTopicPrefix=config.get('MQTT','topicPrefix')+'/'+mqttClientId;
@@ -312,6 +314,7 @@ if __name__ == '__main__':
 		client = mqtt.Client()
 		client.on_connect = on_connect
 		client.on_disconnect = on_disconnect
+		client.username_pw_set(mqttBrokerLogin,mqttBrokerPassword)
 		#last will
 		client.will_set(mqttTopicPrefix+'/status',"Offline",1,True)
 		client.connect_async(mqttBrokerHost, int(mqttBrokerPort))

@@ -184,4 +184,8 @@ Main found limitations of the Diematic 3 interfaces are :
 - no possibility to use without issue temporary freezing mode
 - pump power stays at 100% when all pumps are off
 
+<h3>Experience return</h3>
+
+[Here](<h3>Limitations</h3>) is an interesting application to monitor gaz consumption and level inside a gaz tank
+
 For further info you can go to [Fibaro forum](https://www.domotique-fibaro.fr/topic/5677-de-dietrich-diematic-isystem/) or to the [Home Assistant Community](https://community.home-assistant.io/t/de-dietrich-diematic-modbus-to-mqtt-interface/363086)

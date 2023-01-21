@@ -59,93 +59,9 @@ You can now go on with setting the USR-TCP-232-306  module with a standard web b
 
 Remark : I let you read the doc to configure IP parameters of the USR-TCP-232-306. The TCP server address of the above page is not used
 
-<h3>Python script deployment</h3>
+<h3>Python script installation</h3>
 
-Install pytz package:
-
-    sudo pip3 install pytz
-
-Install paho MQTT client:
-
-    sudo pip3 install paho-mqtt
-
-Script are available [here](src/)
-
-You just need to copy file in a choosen directory.
-You need to configure Diematic32MQTT.conf file with :
-- ip address of the USR module
-- port of the module (20108 by default)
-- MQTT broker address and port 
-- MQTT topic root if you want to modify the default one
-- timezone to be use for boiler clock setup feature
-
-You can also configure the log level in the logging.conf file.
-To run the script you just have to launch python3 Diematic32MQTT.py
-
-You can follow log in real time with:
-
-    tail -f log.out
-
-<h3>To display MQTT message send</h3>
-Use mosquitto_sub command:
-
-    mosquitto_sub -h localhost -v -t 'home/#'
-
-Remark: as modbus switch between slave and master mode, you may have to wait up to 10s to have your command taken into account
-
-<h3>To send MQTT message to the boiler</h3>
-Use mosquitto_pub command. Exemple, to set the regulator in temporary day mode:
-
-    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'TEMP JOUR'
-
-List of MQTT message topics to set temperatures is :
-- home/heater/boiler/hotWater/dayTemp/set
-- home/heater/boiler/hotWater/nightTemp/set
-- home/heater/boiler/zoneA/dayTemp/set
-- home/heater/boiler/zoneA/nightTemp/set
-- home/heater/boiler/zoneA/antiiceTemp/set
-- home/heater/boiler/zoneB/nightTemp/set
-- home/heater/boiler/zoneB/antiiceTemp/set
-
-exemple:
-
-    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/dayTemp/set -m 21.0
-
-List of MQTT message topics to set modes is :
-
-- home/heater/boiler/hotWater/mode/set
-- home/heater/boiler/zoneA/mode/set
-- home/heater/boiler/zoneB/mode/set
-
-Available modes for zone A & B are (sorry they are in french, but still easy to understand):
-- AUTO
-- TEMP JOUR
-- TEMP NUIT
-- PERM JOUR
-- PERM NUIT
-- ANTIGEL
-
-
-
-Available modes for hotwater are (sorry they are in french, but still easy to understand):
-- AUTO
-- TEMP
-- PERM
-- 
-exemple:
-
-    mosquitto_pub -h localhost -t home/heater/boiler/zoneA/mode/set -m 'PERM_NUIT'
-    mosquitto_pub -h localhost -t home/heater/boiler/hotWater/mode/set -m 'TEMP'
-
-To synchronize the boiler clock to the interface clock:
-- home/heater/boiler/date/set
-
-Unique value is :
-- Now
-
-exemple:
-
-    mosquitto_pub -h localhost -t home/heater/boiler/date/set -m 'Now'
+Instructions are available in the [Wiki](https://github.com/Benoit3/Diematic_to_MQTT/wiki)
 
 <h3>Home Assistant Integration</h3>
 
@@ -161,16 +77,6 @@ You will just have to connect your hassio to your MQTT broker and define your ca
 With this [client](https://play.google.com/store/apps/details?id=net.routix.mqttdash&hl=fr&gl=US) you can get easily custom dashboard like this one:
 
 ![Dash MQTT](ReadMeImages/MQTTDash.png)
-
-<h3>To run as a service under Raspbian</h3>
-
-as root, copy and adapt (varying choosen file directory) Diematic32MQTT.service to /etc/systemd/system/ directory
-
-    sudo chmod 644 /etc/systemd/system/Diematic32MQTT.service
-    chmod +x Diematic32MQTT.py
-    sudo systemctl daemon-reload
-    sudo systemctl enable Diematic32MQTT.service
-    sudo systemctl start Diematic32MQTT.service
 
 <h3>Limitations</h3>
 

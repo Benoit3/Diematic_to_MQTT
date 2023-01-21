@@ -59,9 +59,9 @@ You can now go on with setting the USR-TCP-232-306  module with a standard web b
 
 Remark : I let you read the doc to configure IP parameters of the USR-TCP-232-306. The TCP server address of the above page is not used
 
-<h3>Python script </h3>
-Instructions are available in the 
-[Wiki](https://github.com/Benoit3/Diematic_to_MQTT/wiki)
+<h3>Python script installation</h3>
+
+Instructions are available in the [Wiki](https://github.com/Benoit3/Diematic_to_MQTT/wiki)
 
 <h3>Home Assistant Integration</h3>
 

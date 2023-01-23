@@ -1,0 +1,6 @@
+# Mandatory packages
+require-python-3
+pytz>=2021.3
+paho_mqtt>=1.5.0
+
+

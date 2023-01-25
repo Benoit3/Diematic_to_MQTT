@@ -1,6 +1,6 @@
-# This is a basic workflow to help you get started with Actions
+# Basic workflow to build and publish docker image
 
-name: CI/CD dockerization
+name: Build and Publish Docker Image
 
 on:
   push:
@@ -40,6 +40,5 @@ jobs:
         with:
           context: .
           push: true
-#          tags: ${{ steps.meta.outputs.tags }}
           tags: ${{ steps.meta.outputs.tags }}-latest
           labels: ${{ steps.meta.outputs.labels }}

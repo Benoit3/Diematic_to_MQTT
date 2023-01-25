@@ -245,7 +245,7 @@ def sigterm_exit(signum, frame):
 if __name__ == '__main__':
 
 	# Initialisation Logger
-	logging.config.fileConfig('logging.conf');
+	logging.config.fileConfig('./conf/logging.conf');
 	logger = logging.getLogger(__name__);
 	
 	#Sigterm trapping
@@ -253,7 +253,7 @@ if __name__ == '__main__':
 	try:
 		#Initialisation config
 		config = configparser.ConfigParser()
-		config.read('Diematic32MQTT.conf')
+		config.read('./conf/Diematic32MQTT.conf')
 
 		#Modbus settings
 		modbusAddress=config.get('Modbus','ip');

@@ -1,0 +1,26 @@
+# Basic workflow to clean packages and worflow runs
+name: Clean docker Image and worflow runs
+on: 
+  workflow_dispatch:
+  
+jobs:
+  clean-image:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete all containers from package without tags
+        uses: Chizkiyahu/delete-untagged-ghcr-action@v2
+        with:
+            token: ${{ secrets.MGT_TOKEN }}
+            repository_owner: ${{ github.repository_owner }}
+            owner_type: user
+           
+  clean-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clean workflow runs
+        uses: boredland/action-purge-workflow-runs@1.0.0
+        with:
+          days-old: 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

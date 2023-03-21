@@ -355,7 +355,8 @@ class Diematic:
 		self.fanSpeed=self.registers[DDREGISTER.FAN_SPEED];
 		self.burnerStatus=(self.registers[DDREGISTER.BASE_ECS] & 0x08) >>3;
 		#burner power calculation with fanspeed and ionization current
-		self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100) if (self.ionizationCurrent>0) else 0;
+		if (self.ionizationCurrent is not None):
+			self.burnerPower=round((self.registers[DDREGISTER.FAN_SPEED] / FAN_SPEED_MAX)*100) if (self.ionizationCurrent>0) else 0;
 		self.alarm={'id':None,'txt':None}
 		self.alarm['id']=self.registers[DDREGISTER.ALARME];
 		if (self.alarm['id']==0):

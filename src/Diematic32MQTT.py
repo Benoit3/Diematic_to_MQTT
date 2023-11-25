@@ -9,6 +9,10 @@ import paho.mqtt.client as mqtt
 import json
 import time,datetime
 
+
+ONLINE = 'Online'
+OFFLINE = 'Offline'
+
 class MessageBuffer:
 	def __init__(self,mqtt):
 		#logger
@@ -50,7 +54,7 @@ def diematic3Publish(self):
 		return (f"{parameter:d}" if parameter is not None else '');
 		
 	#boiler
-	buffer.update('status','Online' if self.availability else 'Offline');
+	buffer.update('status',ONLINE if self.availability else OFFLINE);
 	buffer.update('date',self.datetime.isoformat() if self.datetime is not None else '');
 	buffer.update('lastTimeSync',self.lastTimeSync.isoformat() if self.lastTimeSync is not None else '');
 	buffer.update('type',intValue(self.type));
@@ -95,7 +99,7 @@ def diematic3Publish(self):
 	buffer.send();
 
 def haSendDiscoveryMessages(client, userdata, message):
-	if (message.payload.decode()=='online'):
+	if (message.payload.decode()==ONLINE):
 		logger.info('Sending HA discovery messages');
 		
 		#boiler
@@ -143,8 +147,6 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addNumber('zone_B_temp_night',"Température Nuit Zone B",'zoneB/nightTemp','zoneB/nightTemp/set',5,30,0.5,"°C");
 		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");		
 		
-		
-		
 	
 def on_connect(client, userdata, flags, rc):		
 	logger.critical('Connected to MQTT broker');
@@ -153,7 +155,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe(mqttTopicPrefix+'/+/+/set',2);
 	client.subscribe(mqttTopicPrefix+'/date/set',2);
 	if hassioDiscoveryEnable:
-		client.subscribe(hassioDiscoveryPrefix+'/status',2);
+		client.subscribe(mqttTopicPrefix+'/status',2);
 	#clear buffer and inform client that status is still Offline
 	buffer.clear();
 	buffer.update('status','Offline');
@@ -321,12 +323,12 @@ if __name__ == '__main__':
 		client.message_callback_add(mqttTopicPrefix+'/+/+/set',paramSet)
 		client.message_callback_add(mqttTopicPrefix+'/date/set',paramSet)
 		if hassioDiscoveryEnable:
-			client.message_callback_add(hassioDiscoveryPrefix+'/status',haSendDiscoveryMessages)
+			client.message_callback_add(mqttTopicPrefix+'/status',haSendDiscoveryMessages)
 		
 		#create HomeAssistant discovery instance
 
 		hassio=Hassio.Hassio(client,mqttTopicPrefix,mqttClientId,hassioDiscoveryPrefix);
-		hassio.availabilityInfo('status','Online','Offline');
+		hassio.availabilityInfo('status',ONLINE,OFFLINE);
 	
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);

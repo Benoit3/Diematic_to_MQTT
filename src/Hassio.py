@@ -49,7 +49,7 @@ class Hassio:
 			payload["unit_of_measurement"]=unit_of_measurement;
 		payload['device'] = self.device
 		#send discovery message
-		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,True);
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);
 
 	def addBinarySensor(self,object_id,name,deviceClass,shortStateTopic,payload_on,payload_off):
 		#build discovery topic
@@ -69,7 +69,7 @@ class Hassio:
 		payload["enabled_by_default"]=False;
 		payload['device'] = self.device
 		#send discovery message
-		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,True);
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);
 	
 	def addNumber(self,object_id,name,shortStateTopic,shortCommandTopic,min,max,step,unit_of_measurement):
 		#build discovery topic
@@ -91,7 +91,7 @@ class Hassio:
 			payload["unit_of_measurement"]=unit_of_measurement;
 		payload['device'] = self.device
 		#send discovery message
-		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,True);
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);
 		
 	def addSelect(self,object_id,name,shortStateTopic,shortCommandTopic,options):
 		#build discovery topic
@@ -109,7 +109,7 @@ class Hassio:
 		payload["options"]=options;
 		payload['device'] = self.device
 		#send discovery message
-		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,True);	
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);	
 
 	def addSwitch(self,object_id,name,shortStateTopic,shortCommandTopic,payload_off,payload_on):
 		#build discovery topic
@@ -129,5 +129,5 @@ class Hassio:
 		payload["qos"]=2;
 		payload['device'] = self.device
 		#send discovery message
-		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,True);		
+		self.mqtt.publish(discoveryTopic,json.dumps(payload),1,False);		
 

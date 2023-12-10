@@ -9,6 +9,10 @@ import paho.mqtt.client as mqtt
 import json
 import time,datetime
 
+
+ONLINE = 'Online'
+OFFLINE = 'Offline'
+
 class MessageBuffer:
 	def __init__(self,mqtt):
 		#logger
@@ -50,7 +54,7 @@ def diematic3Publish(self):
 		return (f"{parameter:d}" if parameter is not None else '');
 		
 	#boiler
-	buffer.update('status','Online' if self.availability else 'Offline');
+	buffer.update('status',ONLINE if self.availability else OFFLINE);
 	buffer.update('date',self.datetime.isoformat() if self.datetime is not None else '');
 	buffer.update('lastTimeSync',self.lastTimeSync.isoformat() if self.lastTimeSync is not None else '');
 	buffer.update('type',intValue(self.type));
@@ -142,8 +146,6 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addNumber('zone_B_temp_day',"Température Jour Zone B",'zoneB/dayTemp','zoneB/dayTemp/set',5,30,0.5,"°C");
 		hassio.addNumber('zone_B_temp_night',"Température Nuit Zone B",'zoneB/nightTemp','zoneB/nightTemp/set',5,30,0.5,"°C");
 		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");		
-		
-		
 		
 	
 def on_connect(client, userdata, flags, rc):		
@@ -326,7 +328,7 @@ if __name__ == '__main__':
 		#create HomeAssistant discovery instance
 
 		hassio=Hassio.Hassio(client,mqttTopicPrefix,mqttClientId,hassioDiscoveryPrefix);
-		hassio.availabilityInfo('status','Online','Offline');
+		hassio.availabilityInfo('status',ONLINE,OFFLINE);
 	
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);

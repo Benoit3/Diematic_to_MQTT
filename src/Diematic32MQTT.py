@@ -99,7 +99,7 @@ def diematic3Publish(self):
 	buffer.send();
 
 def haSendDiscoveryMessages(client, userdata, message):
-	if (message.payload.decode()==ONLINE):
+	if (message.payload.decode()=='online'):
 		logger.info('Sending HA discovery messages');
 		
 		#boiler
@@ -155,7 +155,7 @@ def on_connect(client, userdata, flags, rc):
 	client.subscribe(mqttTopicPrefix+'/+/+/set',2);
 	client.subscribe(mqttTopicPrefix+'/date/set',2);
 	if hassioDiscoveryEnable:
-		client.subscribe(mqttTopicPrefix+'/status',2);
+		client.subscribe(hassioDiscoveryPrefix+'/status',2);
 	#clear buffer and inform client that status is still Offline
 	buffer.clear();
 	buffer.update('status','Offline');
@@ -323,7 +323,7 @@ if __name__ == '__main__':
 		client.message_callback_add(mqttTopicPrefix+'/+/+/set',paramSet)
 		client.message_callback_add(mqttTopicPrefix+'/date/set',paramSet)
 		if hassioDiscoveryEnable:
-			client.message_callback_add(mqttTopicPrefix+'/status',haSendDiscoveryMessages)
+			client.message_callback_add(hassioDiscoveryPrefix+'/status',haSendDiscoveryMessages)
 		
 		#create HomeAssistant discovery instance
 

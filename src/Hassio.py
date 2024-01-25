@@ -18,9 +18,16 @@ class Hassio:
 		self.clientId=clientId;
 		self.discovery_prefix=discovery_prefix;
 		self.device = {
-			"identifiers": [clientId],
-			"manufacturer": "Dietrich",
-			"name": clientId
+			"identifiers": [""],
+			"manufacturer": "",
+			"name": ""
+		}
+		
+	def setDevice(self,manufacturer,name,id):
+		self.device = {
+			"identifiers": id,
+			"manufacturer": manufacturer,
+			"name": name
 		}
 	
 	def availabilityInfo(self,shortTopic,payload_available,payload_not_available):

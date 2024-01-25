@@ -329,6 +329,7 @@ if __name__ == '__main__':
 
 		hassio=Hassio.Hassio(client,mqttTopicPrefix,mqttClientId,hassioDiscoveryPrefix);
 		hassio.availabilityInfo('status',ONLINE,OFFLINE);
+		hassio.setDevice("De Dietrich",regulatorType,mqttClientId)
 	
 		#create mqtt message buffer
 		buffer=MessageBuffer(client);

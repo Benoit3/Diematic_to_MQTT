@@ -1,0 +1,15 @@
+# Basic workflow to clean packages and worflow runs
+name: Clean worflow runs
+on: 
+  workflow_dispatch:
+  
+jobs:
+  clean-runs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: clean workflow runs
+        uses: boredland/action-purge-workflow-runs@1.0.0
+        with:
+          days-old: 0
+        env:
+          GITHUB_TOKEN: ${{ secrets.MGT_TOKEN }}

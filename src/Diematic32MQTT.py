@@ -33,18 +33,23 @@ class MessageBuffer:
 			
 	#publish buffer content to MQTT broker	
 	def send(self):
-		#for each topic
-		for topic in self.buffer:
-			if self.buffer[topic]['update']:
-				#send message without trailing / on topic
-				if (topic!=''):
-					self.mqtt.publish(mqttTopicPrefix+'/'+topic,self.buffer[topic]['value'],1,True);
-					self.logger.info('Publish :'+mqttTopicPrefix+'/'+topic+' '+self.buffer[topic]['value'])
-				else:
-					self.mqtt.publish(mqttTopicPrefix,self.buffer[topic]['value'],1,True);
-					self.logger.info('Publish :'+mqttTopicPrefix+' '+self.buffer[topic]['value'])
-				#set the flag to False
-				self.buffer[topic]['update']=False;
+		#if broker connected
+		if self.mqtt.brokerConnected:
+			#for each topic
+			for topic in self.buffer:
+				if self.buffer[topic]['update']:
+					#send message without trailing / on topic
+					if (topic!=''):
+						self.mqtt.publish(mqttTopicPrefix+'/'+topic,self.buffer[topic]['value'],1,True);
+						self.logger.info('Publish :'+mqttTopicPrefix+'/'+topic+' '+self.buffer[topic]['value'])
+					else:
+						self.mqtt.publish(mqttTopicPrefix,self.buffer[topic]['value'],1,True);
+						self.logger.info('Publish :'+mqttTopicPrefix+' '+self.buffer[topic]['value'])
+					#set the flag to False
+					self.buffer[topic]['update']=False;
+		#if broker not connected
+		else:
+			logger.error("Not connected to broker, can't publish messages");
 	
 	
 def diematic3Publish(self):
@@ -148,9 +153,9 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");		
 		
 	
-def on_connect(client, userdata, flags, rc):		
+def on_connect(client, userdata, flags, rc):
+	client.brokerConnected=True;
 	logger.critical('Connected to MQTT broker');
-	print('Connected to MQTT broker');
 	#subscribe to control messages with Q0s of 2
 	client.subscribe(mqttTopicPrefix+'/+/+/set',2);
 	client.subscribe(mqttTopicPrefix+'/date/set',2);
@@ -164,6 +169,7 @@ def on_connect(client, userdata, flags, rc):
 	
 	
 def on_disconnect(client, userdata, rc):
+	client.brokerConnected=False;
 	logger.critical('Diconnected from MQTT broker');
 	
 def modeSet(client, userdata, message):
@@ -335,6 +341,7 @@ if __name__ == '__main__':
 		buffer=MessageBuffer(client);
 		
 		#launch MQTT client
+		client.brokerConnected=False;
 		client.loop_start();
 
 		#start modbus thread

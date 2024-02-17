@@ -319,7 +319,13 @@ if __name__ == '__main__':
 		panel.forceCircuitB=config.getboolean('Boiler','enable_circuit_B',fallback=False);
 
 		#init mqtt brooker
-		client = mqtt.Client()
+		if 'CallbackAPIVersion' in dir(mqtt):
+			logger.debug('Paho MQTT version 2.XX or more detected, using callback API version1');
+			client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+		else:
+			logger.debug('Paho MQTT version 1.XX detected');
+			client = mqtt.Client()
+
 		client.on_connect = on_connect
 		client.on_disconnect = on_disconnect
 		client.username_pw_set(mqttBrokerLogin,mqttBrokerPassword)

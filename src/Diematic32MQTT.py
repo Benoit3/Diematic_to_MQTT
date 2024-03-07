@@ -153,7 +153,7 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");		
 		
 	
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, reason_code, properties):
 	client.brokerConnected=True;
 	logger.critical('Connected to MQTT broker');
 	#subscribe to control messages with Q0s of 2
@@ -168,7 +168,7 @@ def on_connect(client, userdata, flags, rc):
 
 	
 	
-def on_disconnect(client, userdata, rc):
+def on_disconnect(client, userdata, flags, reason_code, properties):
 	client.brokerConnected=False;
 	logger.critical('Diconnected from MQTT broker');
 	
@@ -320,8 +320,8 @@ if __name__ == '__main__':
 
 		#init mqtt brooker
 		if 'CallbackAPIVersion' in dir(mqtt):
-			logger.debug('Paho MQTT version 2.XX or more detected, using callback API version1');
-			client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+			logger.debug('Paho MQTT version 2.XX or more detected, using callback API version2');
+			client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
 		else:
 			logger.debug('Paho MQTT version 1.XX detected');
 			client = mqtt.Client()

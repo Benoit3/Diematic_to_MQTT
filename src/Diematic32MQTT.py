@@ -4,7 +4,7 @@
 import sys,signal,threading
 import configparser
 import logging, logging.config
-import DDModbus,Diematic3Panel,DiematicDeltaPanel,Hassio
+import DDModbus,Diematic3Panel,Diematic4Panel,DiematicDeltaPanel,Hassio
 import paho.mqtt.client as mqtt
 import json
 import time,datetime
@@ -52,7 +52,7 @@ class MessageBuffer:
 			logger.error("Not connected to broker, can't publish messages");
 	
 	
-def diematic3Publish(self):
+def diematicPublish(self):
 	def floatValue(parameter):
 		return (f"{parameter:.1f}" if parameter is not None else '');
 	def intValue(parameter):
@@ -304,11 +304,15 @@ if __name__ == '__main__':
 		#init panel
 		if (regulatorType=='DiematicDelta'):
 			logger.critical('Regulator type is Diematic Delta');
-			DiematicDeltaPanel.DiematicDeltaPanel.updateCallback=diematic3Publish;
+			DiematicDeltaPanel.DiematicDeltaPanel.updateCallback=diematicPublish;
 			panel=DiematicDeltaPanel.DiematicDeltaPanel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
+		elif (regulatorType=='Diematic4'):
+			logger.critical('Regulator type is Diematic3');
+			Diematic4Panel.Diematic4Panel.updateCallback=diematicPublish;
+			panel=Diematic4Panel.Diematic4Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		else:
 			logger.critical('Regulator type is Diematic3');
-			Diematic3Panel.Diematic3Panel.updateCallback=diematic3Publish;
+			Diematic3Panel.Diematic3Panel.updateCallback=diematicPublish;
 			panel=Diematic3Panel.Diematic3Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		
 		#set refresh period, with a minimum of 10s

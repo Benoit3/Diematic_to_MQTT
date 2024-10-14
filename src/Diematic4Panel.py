@@ -251,7 +251,10 @@ class Diematic4Panel(Diematic):
 					self.nextSynchroTimestamp=time.time();
 				
 				#sleep waiting for next refresh
-					time.sleep(self.nextSynchroTimestamp-time.time())
+				sleepTime=self.nextSynchroTimestamp-time.time();
+				if sleepTime>0 :
+					self.logger.debug('Sleep for :' + str(sleepTime));
+					time.sleep(sleepTime)
 				
 
 			self.logger.critical('Modbus Thread stopped');

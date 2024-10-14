@@ -307,7 +307,7 @@ if __name__ == '__main__':
 			DiematicDeltaPanel.DiematicDeltaPanel.updateCallback=diematicPublish;
 			panel=DiematicDeltaPanel.DiematicDeltaPanel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		elif (regulatorType=='Diematic4'):
-			logger.critical('Regulator type is Diematic3');
+			logger.critical('Regulator type is Diematic4');
 			Diematic4Panel.Diematic4Panel.updateCallback=diematicPublish;
 			panel=Diematic4Panel.Diematic4Panel(modbusAddress,int(modbusPort),modbusRegulatorAddress,modbusInterfaceAddress,boilerTimezone,boilerTimeSync);
 		else:

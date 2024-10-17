@@ -90,6 +90,9 @@ Main found limitations of the Diematic 3 interfaces are :
 - no possibility to use without issue temporary freezing mode
 - pump power stays at 100% when all pumps are off
 
+<h3>Diematic4 iSystem Compatibility</h3>
+
+Basic compatibility has been enabled for Diematic4. You can select Diematic4 in the configuration file and test. Consult HA forum for more details
 <h3>Experience return</h3>
 
 [Here](https://community.home-assistant.io/t/de-dietrich-diematic-modbus-to-mqtt-interface/363086/27?u=benoits) is an interesting application to monitor gaz consumption and level inside a gaz tank

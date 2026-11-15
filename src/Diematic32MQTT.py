@@ -101,7 +101,17 @@ def diematicPublish(self):
 	buffer.update('zoneB/dayTemp',floatValue(self.zoneBDayTargetTemp));
 	buffer.update('zoneB/nightTemp',floatValue(self.zoneBNightTargetTemp));
 	buffer.update('zoneB/antiiceTemp',floatValue(self.zoneBAntiiceTargetTemp));
-	
+
+	#area C
+	buffer.update('zoneC/temp',floatValue(self.zoneCTemp));
+	buffer.update('zoneC/mode',self.zoneCMode if self.zoneCMode is not None else '');
+	buffer.update('zoneC/pump',intValue(self.zoneCPump));
+	buffer.update('zoneC/targetTemp',floatValue(self.zoneCTargetTemp));
+	buffer.update('zoneC/departureTemp',floatValue(self.zoneCDepartureTemp));
+	buffer.update('zoneC/dayTemp',floatValue(self.zoneCDayTargetTemp));
+	buffer.update('zoneC/nightTemp',floatValue(self.zoneCNightTargetTemp));
+	buffer.update('zoneC/antiiceTemp',floatValue(self.zoneCAntiiceTargetTemp));
+
 	#send MQTT messages
 	buffer.send();
 
@@ -154,7 +164,18 @@ def haSendDiscoveryMessages(client, userdata, message):
 		hassio.addBinarySensor('zone_B_pump',"Pompe Zone B",None,'zoneB/pump',"1","0");
 		hassio.addNumber('zone_B_temp_day',"Température Jour Zone B",'zoneB/dayTemp','zoneB/dayTemp/set',5,30,0.5,"°C");
 		hassio.addNumber('zone_B_temp_night',"Température Nuit Zone B",'zoneB/nightTemp','zoneB/nightTemp/set',5,30,0.5,"°C");
-		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");		
+		hassio.addNumber('zone_B_temp_antiice',"Température Antigel Zone B",'zoneB/antiiceTemp','zoneB/antiiceTemp/set',5,20,0.5,"°C");
+
+		#area C
+		hassio.addSensor('zone_C_temp',"Température Zone C",'temperature','zoneC/temp',None,"°C");
+		hassio.addSelect('zone_C_mode',"Mode Zone C",'zoneC/mode','zoneC/mode/set',['AUTO','TEMP JOUR','PERM JOUR','TEMP NUIT','PERM NUIT','ANTIGEL']);
+		hassio.addSensor('zone_C_mode',"Mode Zone C",None,'zoneC/mode',None,None);
+		hassio.addBinarySensor('zone_C_pump',"Pompe Zone C",None,'zoneC/pump',"1","0");
+		hassio.addSensor('zone_C_target_temp',"Température Calculée Zone C",'temperature','zoneC/targetTemp',None,"°C");
+		hassio.addSensor('zone_C_departure_temp',"Température Départ Zone C",'temperature','zoneC/departureTemp',None,"°C");
+		hassio.addNumber('zone_C_temp_day',"Température Jour Zone C",'zoneC/dayTemp','zoneC/dayTemp/set',5,30,0.5,"°C");
+		hassio.addNumber('zone_C_temp_night',"Température Nuit Zone C",'zoneC/nightTemp','zoneC/nightTemp/set',5,30,0.5,"°C");
+		hassio.addNumber('zone_C_temp_antiice',"Température Antigel Zone C",'zoneC/antiiceTemp','zoneC/antiiceTemp/set',5,20,0.5,"°C");
 		
 	
 def on_connect(client, userdata, flags, reason_code, properties=None):
@@ -180,7 +201,8 @@ def modeSet(client, userdata, message):
 	#table for topic to attribute bind
 	table={'/hotWater/mode/set':'hotWaterMode',
 		'/zoneA/mode/set':'zoneAMode',
-		'/zoneB/mode/set':'zoneBMode'};
+		'/zoneB/mode/set':'zoneBMode',
+		'/zoneC/mode/set':'zoneCMode'};
 		
 	#remove root of the topic
 	shortTopic=message.topic[len(mqttTopicPrefix):]
@@ -202,7 +224,10 @@ def tempSet(client, userdata, message):
 		'/zoneA/antiiceTemp/set':'zoneAAntiiceTargetTemp',
 		'/zoneB/dayTemp/set':'zoneBDayTargetTemp',
 		'/zoneB/nightTemp/set':'zoneBNightTargetTemp',
-		'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp'};
+		'/zoneB/antiiceTemp/set':'zoneBAntiiceTargetTemp',
+		'/zoneC/dayTemp/set':'zoneCDayTargetTemp',
+		'/zoneC/nightTemp/set':'zoneCNightTargetTemp',
+		'/zoneC/antiiceTemp/set':'zoneCAntiiceTargetTemp'};
 		
 	#remove root of the topic
 	shortTopic=message.topic[len(mqttTopicPrefix):]
@@ -325,6 +350,7 @@ if __name__ == '__main__':
 		#force circuit A or B to be enables if requested
 		panel.forceCircuitA=config.getboolean('Boiler','enable_circuit_A',fallback=False);
 		panel.forceCircuitB=config.getboolean('Boiler','enable_circuit_B',fallback=False);
+		panel.forceCircuitC=config.getboolean('Boiler','enable_circuit_C',fallback=False);
 
 		#init mqtt brooker
 		if 'CallbackAPIVersion' in dir(mqtt):

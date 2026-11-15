@@ -178,7 +178,35 @@ class Diematic3Panel(Diematic):
 					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
 			
 				#request refresh
-				self.refreshRequest=True;					
+				self.refreshRequest=True;
+
+#this property is used by the Modbus loop to set register dedicated to Mode C (hot water bits 0x50 are kept unchanged)
+	def modeCUpdate(self):
+		#if mode C register update request is pending
+		if (not(self.zoneCModeUpdateRequest.empty())):
+			#get current mode
+			currentMode=self.modBusInterface.masterReadAnalog(self.regulatorAddress,DDREGISTER.MODE_C.value,1);
+			#in case of success
+			if (currentMode):
+				mode=currentMode[DDREGISTER.MODE_C];
+				self.logger.info('Mode C current value :'+str(mode));
+				mode= (mode & 0x50) | self.zoneCModeUpdateRequest.get();
+				self.logger.info('Mode C next value :'+str(mode));
+				#same empirical write sequence as circuits A and B
+				if (mode==1):
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					time.sleep(0.5);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_C.value,[mode]);
+				else:
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_C.value,[mode]);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[1]);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_C.value,[mode]);
+					time.sleep(0.5);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.MODE_C.value,[mode]);
+					self.modBusInterface.masterWriteAnalog(self.regulatorAddress,DDREGISTER.NB_JOUR_ANTIGEL.value,[0]);
+				#request refresh
+				self.refreshRequest=True;
 
 #modbus loop, shall run in a specific thread. Allow to exchange register values with the Dielatic regulator
 	def loop(self):
@@ -221,7 +249,10 @@ class Diematic3Panel(Diematic):
 						
 						#mode B register update if needed
 						self.modeBUpdate();
-								
+
+						#mode C register update if needed
+						self.modeCUpdate();
+
 						#while general register update request are pending and Master mode is started since less than 2s
 						while (not(self.regUpdateRequest.empty()) and ((time.time()-self.masterTime) < 2)):
 							regSet=self.regUpdateRequest.get(False)

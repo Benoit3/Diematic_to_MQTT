@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import threading,queue
@@ -54,6 +54,15 @@ class Diematic3Panel(Diematic):
 		#else:
 		#	return(False);
 			
+		# Physical heating programs A/B: FC03 read, registers 231/232.
+		# Optional read: never interrupt normal boiler sensor acquisition.
+		programs=self.modBusInterface.masterReadAnalog(self.regulatorAddress,231,2)
+		if programs is not None:
+			self.registers.update(programs)
+		else:
+			self.registers.pop(231,None)
+			self.registers.pop(232,None)
+
 		#update registers 384->447
 		reg=self.modBusInterface.masterReadAnalog(self.regulatorAddress,384,64);
 		if (reg is not None):

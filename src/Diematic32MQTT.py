@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 import sys,signal,threading
@@ -86,6 +86,16 @@ def diematicPublish(self):
 	buffer.update('hotWater/dayTemp',floatValue(self.hotWaterDayTargetTemp));
 	buffer.update('hotWater/nightTemp',floatValue(self.hotWaterNightTargetTemp));
 	
+	# Physical programs: publish only validated read-back values.
+	def physicalProgram(reg):
+		value=self.registers.get(reg) if self.availability else None
+		return 'P'+str(value+1) if type(value) is int and 0 <= value <= 3 else ''
+	programA=physicalProgram(231)
+	programB=physicalProgram(232)
+	buffer.update('zoneA/program',programA)
+	buffer.update('zoneB/program',programB)
+	buffer.update('program/common',programA if programA and programA==programB else '')
+
 	#area A
 	buffer.update('zoneA/temp',floatValue(self.zoneATemp));
 	buffer.update('zoneA/mode',self.zoneAMode if self.zoneAMode is not None else '');
@@ -150,6 +160,9 @@ def haSendDiscoveryMessages(client, userdata, message):
 		
 		#area A
 		hassio.addSensor('zone_A_temp',"Température Zone A",'temperature','zoneA/temp',None,"°C");
+		hassio.addSelect('zone_A_program',"Programme physique Salon",'zoneA/program','zoneA/program/set',['P1','P2','P3','P4']);
+		hassio.addSensor('zone_A_program',"Programme physique Salon",None,'zoneA/program',None,None);
+		hassio.addSelect('program_common',"Programme physique commun",'program/common','program/common/set',['P1','P2','P3','P4']);
 		hassio.addSelect('zone_A_mode',"Mode Zone A",'zoneA/mode','zoneA/mode/set',['AUTO','TEMP JOUR','PERM JOUR','TEMP NUIT','PERM NUIT','ANTIGEL']);
 		hassio.addSensor('zone_A_mode',"Mode Zone A",None,'zoneA/mode',None,None);
 		hassio.addBinarySensor('zone_A_pump',"Pompe Zone A",None,'zoneA/pump',"1","0");
@@ -159,6 +172,8 @@ def haSendDiscoveryMessages(client, userdata, message):
 		
 		#area B
 		hassio.addSensor('zone_B_temp',"Température Zone B",'temperature','zoneB/temp',None,"°C");
+		hassio.addSelect('zone_B_program',"Programme physique Cuisine",'zoneB/program','zoneB/program/set',['P1','P2','P3','P4']);
+		hassio.addSensor('zone_B_program',"Programme physique Cuisine",None,'zoneB/program',None,None);
 		hassio.addSelect('zone_B_mode',"Mode Zone B",'zoneB/mode','zoneB/mode/set',['AUTO','TEMP JOUR','PERM JOUR','TEMP NUIT','PERM NUIT','ANTIGEL']);
 		hassio.addSensor('zone_B_mode',"Mode Zone B",None,'zoneB/mode',None,None);
 		hassio.addBinarySensor('zone_B_pump',"Pompe Zone B",None,'zoneB/pump',"1","0");
@@ -215,6 +230,32 @@ def modeSet(client, userdata, message):
 	else:
 		logger.warning('Unknown topic : '+shortTopic);
 
+def programSet(client, userdata, message):
+	if not isinstance(panel,Diematic3Panel.Diematic3Panel):
+		logger.warning('Programme physique non pris en charge sur ce type de regulateur');
+		return
+	if message.retain:
+		logger.warning('Commande programme MQTT retain ignoree');
+		return
+	shortTopic=message.topic[len(mqttTopicPrefix):]
+	table={'/zoneA/program/set':(231,),
+		'/zoneB/program/set':(232,),
+		'/program/common/set':(231,232)}
+	if shortTopic not in table:
+		logger.warning('Topic programme inconnu : '+shortTopic);
+		return
+	option=message.payload.decode('utf-8').strip().upper()
+	if option not in ('P1','P2','P3','P4'):
+		logger.warning('Programme refuse : '+repr(option));
+		return
+	program=int(option[1])-1
+	for address in table[shortTopic]:
+		current=panel.registers.get(address)
+		if current == program:
+			continue
+		logger.info('Programme physique reg %d : demande %s',address,option)
+		panel.regUpdateRequest.put(DDModbus.RegisterSet(address,[program]));
+
 def tempSet(client, userdata, message):	
 	#table for topic to attribute bind
 	table={'/hotWater/dayTemp/set':'hotWaterDayTargetTemp',
@@ -265,7 +306,9 @@ def dateSet(client, userdata, message):
 def paramSet(client, userdata, message):
 	try:
 		logger.debug('MQTT msg received :'+message.topic+' '+str(message.payload));
-		if (message.topic[-8:]=='Temp/set'):
+		if (message.topic.endswith('/program/set') or message.topic.endswith('/program/common/set')):
+			programSet(client,userdata,message);
+		elif (message.topic[-8:]=='Temp/set'):
 			tempSet(client, userdata, message);
 		elif (message.topic[-8:]=='mode/set'):
 			modeSet(client, userdata, message);
